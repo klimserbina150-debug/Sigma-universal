@@ -1,4 +1,4 @@
--- Sigma Universal v3.4
+-- Sigma Universal v3.6
 -- by @sigmatop1jj
 
 if getgenv().SigmaLoaded then warn("Sigma already loaded!") return end
@@ -9,7 +9,7 @@ local Library = loadstring(game:HttpGet(repo .. "Library.lua"))()
 
 local Window = Library:CreateWindow({
     Title = "Sigma Universal",
-    Footer = "by @sigmatop1jj | v3.4",
+    Footer = "by @sigmatop1jj | v3.6",
     Center = true, AutoShow = true, Resizable = true,
 })
 
@@ -44,42 +44,58 @@ local function IsKeybindActive(keyStr)
 end
 
 local Vars = {
+    -- Aimbot
     AimbotEnabled=false, AimbotAlways=false, AimbotVisibleCheck=true,
     AimbotFov=150, AimbotSmoothness=5, AimbotPrediction=0.165,
     AimbotTarget="Head", AimbotMaxDistance=1500,
     AimbotKeybind="MouseButton2", AimbotIgnoreList={},
+    -- Trigger Bot
     TriggerBotEnabled=false, TriggerBotFov=50, TriggerBotDelay=0.1,
     TriggerBotVisibleCheck=true, TriggerBotTarget="Head",
     TriggerBotMaxDistance=500, TriggerBotIgnoreList={},
+    -- Big Head
+    BigHeadEnabled=false, BigHeadScale=3, BigHeadTeamCheck=true,
+    -- FOV Circle
     FovCircleEnabled=true, FovCircleFilled=false, FovCircleThickness=2,
     FovCircleRainbow=false, FovCircleColor=Color3.fromRGB(255,255,255),
+    -- Crosshair
     CrosshairEnabled=false, CrosshairStyle="Cross",
     CrosshairSize=10, CrosshairThickness=1.5, CrosshairGap=4,
     CrosshairColor=Color3.fromRGB(255,255,255), CrosshairRainbow=false,
     CrosshairDot=false, CrosshairPulse=false, CrosshairPulseSpeed=3,
     CrosshairRotation=0, CrosshairHideCursor=false,
+    -- Sounds
     HitSoundEnabled=false, HitSoundChoice="None", HitSoundVolume=1,
     CustomShootSoundEnabled=false, CustomShootSoundChoice="None", CustomShootSoundVolume=5,
+    -- Visuals
     Fullbright=false, Brightness=2, NoFog=false, NoShadows=false,
     FovChanger=false, FovValue=70,
     Bloom=false, BloomIntensity=0.7, ColorCorrection=false,
     Saturation=0, Contrast=0, CCTint=Color3.fromRGB(255,255,255),
+    -- ESP
     ESPBox=false, ESPName=false, ESPDistance=false, ESPHealthBar=false,
     ESPTeamCheck=true, ESPMaxDistance=1500,
     ESPBoxColor=Color3.fromRGB(255,255,255), ESPTextColor=Color3.fromRGB(255,255,255),
+    -- Chams
     ChamsEnabled=false, ChamsTeamCheck=true, ChamsTransparency=0.5,
     ChamsMaxDistance=1500, ChamsFill=Color3.fromRGB(255,0,0),
     ChamsOutline=Color3.fromRGB(255,255,255), ChamsRainbow=false,
+    -- Skeleton ESP
+    SkeletonEnabled=false, SkeletonColor=Color3.fromRGB(255,255,255),
+    SkeletonThickness=1.5, SkeletonTeamCheck=true, SkeletonMaxDistance=1000,
+    -- Movement
     Bunnyhop=false, Speedhack=false, SpeedValue=24,
     Fly=false, FlySpeed=50, Spinbot=false, SpinSpeed=15,
     SpiderEnabled=false, SpiderSpeed=50,
     NoclipEnabled=false,
+    -- World
     TimeChanger=false, TimeValue=12, AmbientOverride=false,
     AmbientColor=Color3.fromRGB(255,255,255),
     AtmEnabled=false, AtmDensity=0.35, AtmHaze=1, AtmGlare=10,
     AtmColor=Color3.fromRGB(199,212,255), AtmDecay=Color3.fromRGB(106,112,125),
     OptNoShadows=true, OptNoParticles=true, OptNoPostFX=true,
     OptNoWaterWaves=true, OptNoTextures=false, OptQuality=1,
+    -- Stats
     StatsEnabled=false, StatsPosition="TopLeft", StatsRainbow=false,
     StatsShowFPS=true, StatsShowPing=true, StatsShowMemory=true, StatsShowTime=false,
 }
@@ -173,7 +189,9 @@ local Movement = Window:AddTab("Movement")
 local World = Window:AddTab("World")
 local Settings = Window:AddTab("Settings")
 
+-- ============================================================
 -- COMBAT
+-- ============================================================
 local CG = Combat:AddLeftGroupbox("Aimbot")
 T(CG,"AimbotEnabled","Aimbot",false)
 T(CG,"AimbotAlways","Auto Aim (no key)",false)
@@ -191,6 +209,11 @@ S(CG,"AimbotFov","FOV",150,10,800,0)
 S(CG,"AimbotMaxDistance","Max Distance",1500,0,10000,0)
 S(CG,"AimbotSmoothness","Smoothness",5,1,20,0)
 S(CG,"AimbotPrediction","Prediction",0.165,0,0.5,3)
+
+local BH = Combat:AddLeftGroupbox("Big Head")
+T(BH,"BigHeadEnabled","Big Head (enlarge head hitbox)",false)
+S(BH,"BigHeadScale","Head Scale (x)",3,1,10,1)
+T(BH,"BigHeadTeamCheck","Team Check",true)
 
 local TB = Combat:AddLeftGroupbox("Trigger Bot")
 T(TB,"TriggerBotEnabled","Trigger Bot",false)
@@ -221,7 +244,9 @@ task.spawn(function() task.wait(1); UpdateIgnoreLists() end)
 Players.PlayerAdded:Connect(function() task.wait(1); UpdateIgnoreLists() end)
 Players.PlayerRemoving:Connect(function() task.wait(0.5); UpdateIgnoreLists() end)
 
+-- ============================================================
 -- VISUALS
+-- ============================================================
 local VG = Visuals:AddLeftGroupbox("Fullbright")
 T(VG,"Fullbright","Fullbright",false)
 S(VG,"Brightness","Brightness",2,0,10,1)
@@ -268,7 +293,9 @@ S(VG3,"Saturation","Saturation",0,-1,1,2)
 S(VG3,"Contrast","Contrast",0,-1,1,2)
 C(VG3,"CCTint","Tint",Color3.fromRGB(255,255,255))
 
+-- ============================================================
 -- ESP
+-- ============================================================
 local EG1 = ESPTab:AddLeftGroupbox("Player ESP")
 T(EG1,"ESPBox","Box",false)
 T(EG1,"ESPName","Name",false)
@@ -288,6 +315,13 @@ EG1:AddButton("Fix ESP", function()
     pcall(function() Library:Notify("ESP recreated", 3) end)
 end)
 
+local SKG = ESPTab:AddLeftGroupbox("Skeleton ESP")
+T(SKG,"SkeletonEnabled","Enable Skeleton",false)
+T(SKG,"SkeletonTeamCheck","Team Check",true)
+S(SKG,"SkeletonMaxDistance","Max Distance",1000,0,10000,0)
+S(SKG,"SkeletonThickness","Thickness",1.5,0.5,5,1)
+C(SKG,"SkeletonColor","Color",Color3.fromRGB(255,255,255))
+
 local EG2 = ESPTab:AddRightGroupbox("Chams")
 T(EG2,"ChamsEnabled","Enable Chams",false)
 T(EG2,"ChamsTeamCheck","Team Check",true)
@@ -297,7 +331,9 @@ C(EG2,"ChamsFill","Fill Color",Color3.fromRGB(255,0,0))
 C(EG2,"ChamsOutline","Outline Color",Color3.fromRGB(255,255,255))
 T(EG2,"ChamsRainbow","Rainbow Fill",false)
 
+-- ============================================================
 -- MOVEMENT
+-- ============================================================
 local MG = Movement:AddLeftGroupbox("Movement")
 T(MG,"Bunnyhop","Bunnyhop",false)
 T(MG,"Speedhack","Speedhack",false)
@@ -314,7 +350,9 @@ local MG3 = Movement:AddRightGroupbox("Spinbot")
 T(MG3,"Spinbot","Spinbot",false)
 S(MG3,"SpinSpeed","Spin Speed",15,1,90,0)
 
+-- ============================================================
 -- WORLD
+-- ============================================================
 local WG1 = World:AddLeftGroupbox("Time & Lighting")
 T(WG1,"TimeChanger","Time Changer",false)
 S(WG1,"TimeValue","Time (0-24)",12,0,24,1)
@@ -340,7 +378,9 @@ OG:AddDivider()
 OG:AddButton("Apply Optimization", function() pcall(ApplyOptimization) end)
 OG:AddButton("Restore Graphics", function() pcall(RestoreGraphics) end)
 
+-- ============================================================
 -- SETTINGS
+-- ============================================================
 local SG = Settings:AddLeftGroupbox("Menu")
 SG:AddLabel("Menu Keybind (RightShift)")
 SG:AddButton("Unload", function()
@@ -363,7 +403,7 @@ SG:AddButton("Unload", function()
 end)
 
 local CreditGroup = Settings:AddRightGroupbox("Credits")
-CreditGroup:AddLabel("Script: Sigma Universal v3.4")
+CreditGroup:AddLabel("Script: Sigma Universal v3.6")
 CreditGroup:AddLabel("Author: @sigmatop1jj")
 CreditGroup:AddDivider()
 CreditGroup:AddButton("Copy Telegram", function()
@@ -390,7 +430,7 @@ watermark.TextSize = 14
 watermark.TextColor3 = Color3.fromRGB(180, 100, 255)
 watermark.TextStrokeTransparency = 0.5
 watermark.TextXAlignment = Enum.TextXAlignment.Right
-watermark.Text = "Sigma Universal v3.4 | @sigmatop1jj"
+watermark.Text = "Sigma Universal v3.6 | @sigmatop1jj"
 watermark.Visible = false
 watermark.Parent = watermarkGui
 
@@ -612,7 +652,7 @@ CustomGroup:AddToggle("WatermarkEnabled", {
 })
 CustomGroup:AddInput("WatermarkText", {
     Text = "Watermark Text",
-    Default = "Sigma Universal v3.4 | @sigmatop1jj",
+    Default = "Sigma Universal v3.6 | @sigmatop1jj",
     Finished = true,
     Callback = function(v)
         if v and v ~= "" then watermark.Text = v end
@@ -673,7 +713,9 @@ RunService.RenderStepped:Connect(function(dt)
     end)
 end)
 
+-- ============================================================
 -- IGNORE / TARGET / VISIBLE
+-- ============================================================
 local function IsIgnoredByAim(p)
     if not p or not Vars.AimbotIgnoreList then return false end
     return Vars.AimbotIgnoreList[p.Name] == true
@@ -709,7 +751,9 @@ local function IsVisible(targetChar, mode)
     return ok and result or false
 end
 
+-- ============================================================
 -- AIMBOT
+-- ============================================================
 local function GetClosestPlayer()
     local ok, result = pcall(function()
         local myRoot = LP.Character and LP.Character:FindFirstChild("HumanoidRootPart")
@@ -756,7 +800,84 @@ RunService.RenderStepped:Connect(function()
     end)
 end)
 
+-- ============================================================
+-- BIG HEAD
+-- ============================================================
+local originalHeadSizes = {}
+
+local function ApplyBigHead(char)
+    if not char then return end
+    local head = char:FindFirstChild("Head")
+    if not head or not head:IsA("BasePart") then return end
+    if not originalHeadSizes[head] then
+        originalHeadSizes[head] = {
+            Size = head.Size,
+            Transparency = head.Transparency,
+            CanCollide = head.CanCollide,
+            Massless = head.Massless,
+        }
+    end
+    pcall(function()
+        local orig = originalHeadSizes[head]
+        head.Size = orig.Size * Vars.BigHeadScale
+        head.Transparency = orig.Transparency
+        head.CanCollide = false
+        head.Massless = true
+    end)
+end
+
+local function RestoreBigHead(char)
+    if not char then return end
+    local head = char:FindFirstChild("Head")
+    if not head then return end
+    local orig = originalHeadSizes[head]
+    if orig then
+        pcall(function()
+            head.Size = orig.Size
+            head.Transparency = orig.Transparency
+            head.CanCollide = orig.CanCollide
+            head.Massless = orig.Massless
+        end)
+        originalHeadSizes[head] = nil
+    end
+end
+
+RunService.Heartbeat:Connect(function()
+    pcall(function()
+        if not Vars.BigHeadEnabled then
+            for _, p in ipairs(Players:GetPlayers()) do
+                if p ~= LP and p.Character then RestoreBigHead(p.Character) end
+            end
+            return
+        end
+        for _, p in ipairs(Players:GetPlayers()) do
+            if p ~= LP and p.Character then
+                if Vars.BigHeadTeamCheck and p.Team == LP.Team then
+                    RestoreBigHead(p.Character)
+                    continue
+                end
+                local hum = p.Character:FindFirstChildOfClass("Humanoid")
+                if hum and hum.Health > 0 then ApplyBigHead(p.Character)
+                else RestoreBigHead(p.Character) end
+            end
+        end
+    end)
+end)
+
+Players.PlayerRemoving:Connect(function(p)
+    if p.Character then RestoreBigHead(p.Character) end
+end)
+
+Players.PlayerAdded:Connect(function(p)
+    p.CharacterAdded:Connect(function(ch)
+        task.wait(1)
+        if Vars.BigHeadEnabled then ApplyBigHead(ch) end
+    end)
+end)
+
+-- ============================================================
 -- TRIGGER BOT
+-- ============================================================
 local lastTriggerTime = 0
 local function ClickMouse()
     if mouse1click then pcall(mouse1click); return true end
@@ -805,7 +926,9 @@ RunService.RenderStepped:Connect(function()
     end)
 end)
 
+-- ============================================================
 -- FOV CIRCLE
+-- ============================================================
 local FovCircle, FovLines = nil, nil
 pcall(function()
     FovCircle = Drawing.new("Circle")
@@ -848,7 +971,9 @@ RunService.RenderStepped:Connect(function()
     end)
 end)
 
+-- ============================================================
 -- CROSSHAIR
+-- ============================================================
 local crosshairLines = {}
 for i = 1, 12 do
     local l = Drawing.new("Line")
@@ -990,7 +1115,9 @@ RunService.RenderStepped:Connect(function(dt)
     end)
 end)
 
+-- ============================================================
 -- HIT SOUND
+-- ============================================================
 local lastShotTick = 0
 local hitSoundConns = {}
 local lastHitSoundTick = 0
@@ -1033,7 +1160,9 @@ Players.PlayerRemoving:Connect(function(p)
     if hitSoundConns[p] then pcall(function() hitSoundConns[p]:Disconnect() end); hitSoundConns[p] = nil end
 end)
 
+-- ============================================================
 -- CUSTOM SHOOT SOUND
+-- ============================================================
 local function PlayShootSound()
     if not Vars.CustomShootSoundEnabled or Vars.CustomShootSoundChoice == "None" then return end
     local id = ShootSoundList[Vars.CustomShootSoundChoice] or ""
@@ -1065,7 +1194,9 @@ RunService.Heartbeat:Connect(function()
     end)
 end)
 
+-- ============================================================
 -- MOVEMENT + SPIDER + NOCLIP
+-- ============================================================
 RunService.Heartbeat:Connect(function()
     pcall(function()
         local char = LP.Character
@@ -1124,7 +1255,9 @@ task.spawn(function()
     end)
 end)
 
+-- ============================================================
 -- WORLD
+-- ============================================================
 local Def = {
     Brightness=Lighting.Brightness, ClockTime=Lighting.ClockTime,
     GlobalShadows=Lighting.GlobalShadows, OutdoorAmbient=Lighting.OutdoorAmbient,
@@ -1167,7 +1300,9 @@ RunService.Heartbeat:Connect(function()
     end)
 end)
 
+-- ============================================================
 -- OPTIMIZATION
+-- ============================================================
 local RemovedParticles, RemovedPostFX, OriginalWater = {}, {}, {}
 function ApplyOptimization()
     if Vars.OptNoShadows then
@@ -1230,7 +1365,9 @@ function RestoreGraphics()
     pcall(function() Library:Notify("Graphics restored", 3) end)
 end
 
+-- ============================================================
 -- ESP
+-- ============================================================
 ESP_Data = ESP_Data or {}
 function MakeESP(p)
     if not p or p == LP then return end
@@ -1307,7 +1444,104 @@ RunService.RenderStepped:Connect(function()
     end)
 end)
 
+-- ============================================================
+-- SKELETON ESP
+-- ============================================================
+local SkeletonData = {}
+
+local SkeletonConnections_R15 = {
+    {"Head", "UpperTorso"},
+    {"UpperTorso", "LowerTorso"},
+    {"UpperTorso", "LeftUpperArm"},
+    {"LeftUpperArm", "LeftLowerArm"},
+    {"LeftLowerArm", "LeftHand"},
+    {"UpperTorso", "RightUpperArm"},
+    {"RightUpperArm", "RightLowerArm"},
+    {"RightLowerArm", "RightHand"},
+    {"LowerTorso", "LeftUpperLeg"},
+    {"LeftUpperLeg", "LeftLowerLeg"},
+    {"LeftLowerLeg", "LeftFoot"},
+    {"LowerTorso", "RightUpperLeg"},
+    {"RightUpperLeg", "RightLowerLeg"},
+    {"RightLowerLeg", "RightFoot"},
+}
+local SkeletonConnections_R6 = {
+    {"Head", "Torso"},
+    {"Torso", "Left Arm"},
+    {"Torso", "Right Arm"},
+    {"Torso", "Left Leg"},
+    {"Torso", "Right Leg"},
+}
+
+local function MakeSkeleton(p)
+    if not p or p == LP then return end
+    if SkeletonData[p] then
+        for _, line in ipairs(SkeletonData[p]) do pcall(function() line:Remove() end) end
+    end
+    local lines = {}
+    for i = 1, 14 do
+        local l = Drawing.new("Line")
+        l.Visible = false; l.Thickness = 1.5; l.Color = Color3.new(1,1,1); l.ZIndex = 4
+        table.insert(lines, l)
+    end
+    SkeletonData[p] = lines
+end
+
+local function RemoveSkeleton(p)
+    if SkeletonData[p] then
+        for _, line in ipairs(SkeletonData[p]) do pcall(function() line:Remove() end) end
+        SkeletonData[p] = nil
+    end
+end
+
+for _, p in ipairs(Players:GetPlayers()) do MakeSkeleton(p) end
+Players.PlayerAdded:Connect(MakeSkeleton)
+Players.PlayerRemoving:Connect(RemoveSkeleton)
+
+RunService.RenderStepped:Connect(function()
+    pcall(function()
+        local myRoot = LP.Character and LP.Character:FindFirstChild("HumanoidRootPart")
+        for p, lines in pairs(SkeletonData) do
+            for _, l in ipairs(lines) do l.Visible = false end
+            local show = Vars.SkeletonEnabled and p.Character and myRoot
+            if show and Vars.SkeletonTeamCheck and p.Team == LP.Team then show = false end
+            if show then
+                local pRoot = p.Character:FindFirstChild("HumanoidRootPart")
+                if not pRoot or (myRoot.Position - pRoot.Position).Magnitude > Vars.SkeletonMaxDistance then
+                    show = false
+                end
+            end
+            if show then
+                local connections = SkeletonConnections_R15
+                if not p.Character:FindFirstChild("UpperTorso") then
+                    connections = SkeletonConnections_R6
+                end
+                local idx = 1
+                for _, pair in ipairs(connections) do
+                    local a = p.Character:FindFirstChild(pair[1])
+                    local b = p.Character:FindFirstChild(pair[2])
+                    if a and b and lines[idx] then
+                        local aPos, aOn = Cam:WorldToViewportPoint(a.Position)
+                        local bPos, bOn = Cam:WorldToViewportPoint(b.Position)
+                        if aOn or bOn then
+                            local l = lines[idx]
+                            l.From = Vector2.new(aPos.X, aPos.Y)
+                            l.To = Vector2.new(bPos.X, bPos.Y)
+                            l.Color = Vars.SkeletonColor
+                            l.Thickness = Vars.SkeletonThickness
+                            l.Visible = true
+                        end
+                    end
+                    idx = idx + 1
+                end
+            end
+        end
+    end)
+end)
+
+-- ============================================================
 -- CHAMS
+-- ============================================================
 local chams = {}
 local function ApplyChams(p)
     if p == LP or not p.Character then return end
@@ -1351,9 +1585,12 @@ RunService.Heartbeat:Connect(function()
 end)
 Players.PlayerRemoving:Connect(RemoveChams)
 
+-- ============================================================
+-- READY
+-- ============================================================
 task.spawn(function()
     task.wait(1)
-    pcall(function() Library:Notify("Sigma Universal v3.4 loaded!", 5) end)
+    pcall(function() Library:Notify("Sigma Universal v3.6 loaded!", 5) end)
 end)
-print("=== Sigma Universal v3.4 READY ===")
+print("=== Sigma Universal v3.6 READY ===")
 print("Author: @sigmatop1jj")
