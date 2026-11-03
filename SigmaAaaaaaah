@@ -1,4 +1,4 @@
--- Sigma Universal v2.8
+-- Sigma Universal v3.2
 -- by @sigmatop1jj
 
 if getgenv().SigmaLoaded then warn("Sigma already loaded!") return end
@@ -9,7 +9,7 @@ local Library = loadstring(game:HttpGet(repo .. "Library.lua"))()
 
 local Window = Library:CreateWindow({
     Title = "Sigma Universal",
-    Footer = "by @sigmatop1jj | v2.8",
+    Footer = "by @sigmatop1jj | v3.2",
     Center = true, AutoShow = true, Resizable = true,
 })
 
@@ -23,7 +23,7 @@ local LP = Players.LocalPlayer
 local Cam = workspace.CurrentCamera
 local VEC0 = Vector3.new(0, 0, 0)
 
--- KEY STATE TRACKER
+-- KEY STATE
 local keyStates, mouseStates = {}, {}
 UIS.InputBegan:Connect(function(input)
     if input.UserInputType == Enum.UserInputType.MouseButton1 then mouseStates.MouseButton1 = true
@@ -45,11 +45,10 @@ local function IsKeybindActive(keyStr)
     return keyStates[keyStr] == true
 end
 
--- VARS
 local Vars = {
     AimbotEnabled=false, AimbotAlways=false, AimbotVisibleCheck=true,
     AimbotFov=150, AimbotSmoothness=5, AimbotPrediction=0.165,
-    AimbotMultipoint=true, AimbotTarget="Head", AimbotMaxDistance=1500,
+    AimbotTarget="Head", AimbotMaxDistance=1500,
     AimbotKeybind="MouseButton2", AimbotIgnoreList={},
     TriggerBotEnabled=false, TriggerBotFov=50, TriggerBotDelay=0.1,
     TriggerBotVisibleCheck=true, TriggerBotTarget="Head",
@@ -57,6 +56,11 @@ local Vars = {
     HitboxEnabled=false, HitboxScale=2, HitboxTeamCheck=true,
     FovCircleEnabled=true, FovCircleFilled=false, FovCircleThickness=2,
     FovCircleRainbow=false, FovCircleColor=Color3.fromRGB(255,255,255),
+    CrosshairEnabled=false, CrosshairStyle="Cross",
+    CrosshairSize=10, CrosshairThickness=1.5, CrosshairGap=4,
+    CrosshairColor=Color3.fromRGB(255,255,255), CrosshairRainbow=false,
+    CrosshairDot=false, CrosshairPulse=false, CrosshairPulseSpeed=3,
+    CrosshairRotation=0, CrosshairHideCursor=false,
     TracerEnabled=false, TracerLifetime=0.5, TracerThickness=0.1,
     TracerColor=Color3.fromRGB(0,255,255), TracerGlow=true, TracerStartTransparency=0,
     HitSoundEnabled=false, HitSoundChoice="None", HitSoundVolume=1,
@@ -73,6 +77,8 @@ local Vars = {
     ChamsOutline=Color3.fromRGB(255,255,255), ChamsRainbow=false,
     Bunnyhop=false, Speedhack=false, SpeedValue=24,
     Fly=false, FlySpeed=50, Spinbot=false, SpinSpeed=15,
+    SpiderEnabled=false, SpiderSpeed=50,
+    NoclipEnabled=false,
     TimeChanger=false, TimeValue=12, AmbientOverride=false,
     AmbientColor=Color3.fromRGB(255,255,255),
     AtmEnabled=false, AtmDensity=0.35, AtmHaze=1, AtmGlare=10,
@@ -91,7 +97,6 @@ local function C(box, key, text, default)
     box:AddLabel(text):AddColorPicker(key, { Default = default or Vars[key], Callback=function(v) Vars[key] = v end })
 end
 
--- SOUND LISTS
 local HSList = {
     ["None"]="", ["Skeet"]="rbxassetid://83717596220569",
     ["Sonic Checkpoint"]="rbxassetid://6817150445", ["Sonic.exe Laugh"]="rbxassetid://18379039436",
@@ -120,7 +125,76 @@ for k in pairs(HSList) do table.insert(HSNames, k) end
 for k in pairs(ShootSoundList) do table.insert(ShootSoundNames, k) end
 table.sort(HSNames); table.sort(ShootSoundNames)
 
--- TABS
+-- WEAPON DETECTION
+local MeleeKeywords = {"knife","sword","axe","bat","hammer","katana","machete","pickaxe","club","fist","stick","wrench","crowbar","dagger","blade","scythe","spear","bow","crossbow","pipe","taser","shield","guitar","shovel","hoe","rake","pan"}
+local GunKeywords = {"gun","pistol","rifle","ak47","ak-47","ak74","m4","m16","shotgun","sniper","smg","revolver","deagle","glock","uzi","mp5","awp","famas","scar","lmg","minigun","launcher","rpg","bazooka","p90","vector","weapon","firearm","handgun","carbine","magnum","sks","mac-10","mac10","ump","sg","aa-12","aa12","db","double-barrel"}
+local function IsGunTool(tool)
+    if not tool then return false end
+    local name = string.lower(tool.Name)
+    for _, kw in ipairs(MeleeKeywords) do
+        if string.find(name, kw, 1, true) then return false end
+    end
+    for _, kw in ipairs(GunKeywords) do
+        if string.find(name, kw, 1, true) then return true end
+    end
+    if tool:FindFirstChild("Muzzle") or tool:FindFirstChild("Barrel")
+       or tool:FindFirstChild("Scope") or tool:FindFirstChild("Magazine") then return true end
+    for _, d in ipairs(tool:GetDescendants()) do
+        if d:IsA("Sound") then
+            local sn = string.lower(d.Name)
+            if string.find(sn, "fire", 1, true) or string.find(sn, "shoot", 1, true)
+               or string.find(sn, "gun", 1, true) or string.find(sn, "shot", 1, true) then return true end
+        end
+    end
+    return false
+end
+
+local MuzzleNames = {"Muzzle","Barrel","FirePoint","ShootPoint","Nozzle","Tip","BarrelTip","MuzzlePoint","FirePos","ShootPos","ShootPart","FirePart"}
+local function GetMuzzle(tool, char)
+    if not tool then return nil end
+    for _, n in ipairs(MuzzleNames) do
+        local p = tool:FindFirstChild(n, true)
+        if p and p:IsA("BasePart") then return p end
+    end
+    local handle = tool:FindFirstChild("Handle")
+    if handle and handle:IsA("BasePart") then
+        local hrp = char and char:FindFirstChild("HumanoidRootPart")
+        if hrp then
+            local farthest, farthestDist = nil, 0
+            for _, c in ipairs(tool:GetDescendants()) do
+                if c:IsA("BasePart") and c ~= handle then
+                    local d = (c.Position - hrp.Position).Magnitude
+                    if d > farthestDist then farthest, farthestDist = c, d end
+                end
+            end
+            if farthest then return farthest end
+        end
+        return handle
+    end
+    return tool:FindFirstChildWhichIsA("BasePart")
+end
+
+local function GetFireRate(tool)
+    if not tool then return 0.1 end
+    local keys = {"FireDelay","FireRate","ShootCooldown","Cooldown","Delay","ShotDelay","AttackSpeed"}
+    for _, k in ipairs(keys) do
+        local v = tool:GetAttribute(k)
+        if type(v) == "number" and v > 0 then
+            if k == "FireRate" then return math.max(0.05, 1/v) end
+            return math.max(0.05, math.min(2, v))
+        end
+    end
+    for _, c in ipairs(tool:GetDescendants()) do
+        if c:IsA("NumberValue") or c:IsA("IntValue") then
+            local n = string.lower(c.Name)
+            if (string.find(n, "fire") or string.find(n, "shoot") or string.find(n, "delay") or string.find(n, "cooldown")) then
+                if c.Value > 0 and c.Value < 3 then return math.max(0.05, c.Value) end
+            end
+        end
+    end
+    return 0.1
+end
+
 local Combat = Window:AddTab("Combat")
 local Visuals = Window:AddTab("Visuals")
 local ESPTab = Window:AddTab("ESP")
@@ -140,16 +214,10 @@ CG:AddLabel("Aim Keybind"):AddKeyPicker("AimKeybind", {
     end,
 })
 T(CG,"AimbotVisibleCheck","Visible Check",true)
-CG:AddDropdown("AimbotTarget", {
-    Text="Target Part", Values={"Head","Torso","HumanoidRootPart"}, Default="Head",
-    Callback=function(v) Vars.AimbotTarget = v end,
-})
-local AimbotIgnoreDropdown = CG:AddDropdown("AimbotIgnoreList", {
-    Text="Ignore Players", Values={}, Default={}, Multi=true,
-    Callback=function(v) Vars.AimbotIgnoreList = v or {} end,
-})
+CG:AddDropdown("AimbotTarget", { Text="Target Part", Values={"Head","Torso","HumanoidRootPart"}, Default="Head", Callback=function(v) Vars.AimbotTarget = v end })
+local AimbotIgnoreDropdown = CG:AddDropdown("AimbotIgnoreList", { Text="Ignore Players", Values={}, Default={}, Multi=true, Callback=function(v) Vars.AimbotIgnoreList = v or {} end })
 S(CG,"AimbotFov","FOV",150,10,800,0)
-S(CG,"AimbotMaxDistance","Max Distance (studs)",1500,0,10000,0)
+S(CG,"AimbotMaxDistance","Max Distance",1500,0,10000,0)
 S(CG,"AimbotSmoothness","Smoothness",5,1,20,0)
 S(CG,"AimbotPrediction","Prediction",0.165,0,0.5,3)
 
@@ -161,17 +229,11 @@ T(HB,"HitboxTeamCheck","Team Check",true)
 local TB = Combat:AddLeftGroupbox("Trigger Bot")
 T(TB,"TriggerBotEnabled","Trigger Bot",false)
 T(TB,"TriggerBotVisibleCheck","Visible Check",true)
-TB:AddDropdown("TriggerBotTarget", {
-    Text="Target Part", Values={"Head","Torso","HumanoidRootPart"}, Default="Head",
-    Callback=function(v) Vars.TriggerBotTarget = v end,
-})
-local TriggerIgnoreDropdown = TB:AddDropdown("TriggerBotIgnoreList", {
-    Text="Ignore Players", Values={}, Default={}, Multi=true,
-    Callback=function(v) Vars.TriggerBotIgnoreList = v or {} end,
-})
-S(TB,"TriggerBotFov","Center FOV (pixels)",50,1,300,0)
-S(TB,"TriggerBotMaxDistance","Max Distance (studs)",500,0,10000,0)
-S(TB,"TriggerBotDelay","Delay (sec)",0.1,0.01,1,2)
+TB:AddDropdown("TriggerBotTarget", { Text="Target Part", Values={"Head","Torso","HumanoidRootPart"}, Default="Head", Callback=function(v) Vars.TriggerBotTarget = v end })
+local TriggerIgnoreDropdown = TB:AddDropdown("TriggerBotIgnoreList", { Text="Ignore Players", Values={}, Default={}, Multi=true, Callback=function(v) Vars.TriggerBotIgnoreList = v or {} end })
+S(TB,"TriggerBotFov","Center FOV",50,1,300,0)
+S(TB,"TriggerBotMaxDistance","Max Distance",500,0,10000,0)
+S(TB,"TriggerBotDelay","Delay",0.1,0.01,1,2)
 
 local FOVC = Combat:AddRightGroupbox("Aim FOV Circle")
 T(FOVC,"FovCircleEnabled","Show Circle",true)
@@ -180,7 +242,6 @@ S(FOVC,"FovCircleThickness","Thickness",2,1,10,0)
 T(FOVC,"FovCircleRainbow","Rainbow",false)
 C(FOVC,"FovCircleColor","Color",Color3.fromRGB(255,255,255))
 
--- IGNORE LIST UPDATE
 local function UpdateIgnoreLists()
     local names = {}
     for _, p in ipairs(Players:GetPlayers()) do
@@ -201,6 +262,25 @@ S(VG,"Brightness","Brightness",2,0,10,1)
 T(VG,"NoFog","Remove Fog",false)
 T(VG,"NoShadows","No Shadows",false)
 
+local CHGroup = Visuals:AddLeftGroupbox("Crosshair")
+T(CHGroup, "CrosshairEnabled", "Enable Crosshair", false)
+CHGroup:AddDropdown("CrosshairStyle", {
+    Text = "Style",
+    Values = {"Cross", "Dot", "Circle", "Plus", "X", "T-Shape", "Pinwheel", "Star", "Peace"},
+    Default = "Cross",
+    Callback = function(v) Vars.CrosshairStyle = v end,
+})
+S(CHGroup, "CrosshairSize", "Size", 10, 2, 50, 0)
+S(CHGroup, "CrosshairThickness", "Thickness", 1.5, 0.5, 5, 1)
+S(CHGroup, "CrosshairGap", "Gap", 4, 0, 30, 0)
+S(CHGroup, "CrosshairRotation", "Rotation Speed", 0, -360, 360, 0)
+T(CHGroup, "CrosshairDot", "Dot", false)
+T(CHGroup, "CrosshairPulse", "Pulse", false)
+S(CHGroup, "CrosshairPulseSpeed", "Pulse Speed", 3, 0.5, 10, 1)
+T(CHGroup, "CrosshairRainbow", "Rainbow", false)
+C(CHGroup, "CrosshairColor", "Color", Color3.fromRGB(255,255,255))
+T(CHGroup, "CrosshairHideCursor", "Hide System Cursor", false)
+
 local TRG = Visuals:AddLeftGroupbox("Tracers")
 T(TRG,"TracerEnabled","Bullet Tracers",false)
 S(TRG,"TracerLifetime","Lifetime (sec)",0.5,0.1,3,2)
@@ -211,22 +291,16 @@ C(TRG,"TracerColor","Color",Color3.fromRGB(0,255,255))
 
 local SG2 = Visuals:AddLeftGroupbox("Sounds")
 T(SG2,"HitSoundEnabled","Hit Sound",false)
-SG2:AddDropdown("HitSoundChoice", {
-    Text="Hit Sound", Values=HSNames, Default="None",
-    Callback=function(v) Vars.HitSoundChoice = v end,
-})
+SG2:AddDropdown("HitSoundChoice", { Text="Hit Sound", Values=HSNames, Default="None", Callback=function(v) Vars.HitSoundChoice = v end })
 S(SG2,"HitSoundVolume","Hit Volume",1,0,10,1)
 SG2:AddDivider()
 T(SG2,"CustomShootSoundEnabled","Custom Shoot Sound",false)
-SG2:AddDropdown("CustomShootSoundChoice", {
-    Text="Shoot Sound", Values=ShootSoundNames, Default="None",
-    Callback=function(v) Vars.CustomShootSoundChoice = v end,
-})
+SG2:AddDropdown("CustomShootSoundChoice", { Text="Shoot Sound", Values=ShootSoundNames, Default="None", Callback=function(v) Vars.CustomShootSoundChoice = v end })
 S(SG2,"CustomShootSoundVolume","Shoot Volume",5,0,10,1)
 
 local VG2 = Visuals:AddRightGroupbox("Camera")
 T(VG2,"FovChanger","FOV Changer",false)
-S(VG2,"FovValue","FOV (50-120)",70,50,120,0)
+S(VG2,"FovValue","FOV (50-240)",70,50,240,0)
 
 local VG3 = Visuals:AddRightGroupbox("Effects")
 T(VG3,"Bloom","Bloom",false)
@@ -243,7 +317,7 @@ T(EG1,"ESPName","Name",false)
 T(EG1,"ESPDistance","Distance",false)
 T(EG1,"ESPHealthBar","Health Bar",false)
 T(EG1,"ESPTeamCheck","Team Check",true)
-S(EG1,"ESPMaxDistance","Max Distance (studs)",1500,0,10000,0)
+S(EG1,"ESPMaxDistance","Max Distance",1500,0,10000,0)
 C(EG1,"ESPBoxColor","Box Color",Color3.fromRGB(255,255,255))
 C(EG1,"ESPTextColor","Text Color",Color3.fromRGB(255,255,255))
 EG1:AddDivider()
@@ -273,9 +347,14 @@ S(MG,"SpeedValue","Speed",24,16,200,0)
 T(MG,"Fly","Fly",false)
 S(MG,"FlySpeed","Fly Speed",50,10,300,0)
 
-local MG2 = Movement:AddRightGroupbox("Spinbot")
-T(MG2,"Spinbot","Spinbot",false)
-S(MG2,"SpinSpeed","Spin Speed",15,1,90,0)
+local MG2 = Movement:AddRightGroupbox("Spider & Noclip")
+T(MG2,"SpiderEnabled","Spider (climb walls)",false)
+S(MG2,"SpiderSpeed","Spider Speed",50,10,200,0)
+T(MG2,"NoclipEnabled","Noclip",false)
+
+local MG3 = Movement:AddRightGroupbox("Spinbot")
+T(MG3,"Spinbot","Spinbot",false)
+S(MG3,"SpinSpeed","Spin Speed",15,1,90,0)
 
 -- WORLD
 local WG1 = World:AddLeftGroupbox("Time & Lighting")
@@ -298,7 +377,7 @@ T(OG,"OptNoParticles","Remove Particles",true)
 T(OG,"OptNoPostFX","Remove Post Effects",true)
 T(OG,"OptNoWaterWaves","Simplify Water",true)
 T(OG,"OptNoTextures","Remove Textures",false)
-S(OG,"OptQuality","Render Quality (1-10)",1,1,10,0)
+S(OG,"OptQuality","Render Quality",1,1,10,0)
 OG:AddDivider()
 OG:AddButton("Apply Optimization", function() pcall(ApplyOptimization) end)
 OG:AddButton("Restore Graphics", function() pcall(RestoreGraphics) end)
@@ -306,19 +385,27 @@ OG:AddButton("Restore Graphics", function() pcall(RestoreGraphics) end)
 -- SETTINGS
 local SG = Settings:AddLeftGroupbox("Menu")
 SG:AddLabel("Menu Keybind (RightShift)")
-SG:AddButton("Unload", function() pcall(function() Library:Unload() end) end)
+SG:AddButton("Unload", function()
+    pcall(function() UIS.MouseIconEnabled = true end)
+    pcall(function()
+        if LP.Character then
+            for _, part in ipairs(LP.Character:GetDescendants()) do
+                if part:IsA("BasePart") then part.CanCollide = true end
+            end
+        end
+    end)
+    pcall(function() Library:Unload() end)
+end)
 
 local CreditGroup = Settings:AddRightGroupbox("Credits")
-CreditGroup:AddLabel("Script: Sigma Universal v2.8")
+CreditGroup:AddLabel("Script: Sigma Universal v3.2")
 CreditGroup:AddLabel("Author: @sigmatop1jj")
 CreditGroup:AddDivider()
 CreditGroup:AddButton("Copy Telegram", function()
-    pcall(function()
-        if setclipboard then setclipboard("@sigmatop1jj"); Library:Notify("Copied", 3) end
-    end)
+    pcall(function() if setclipboard then setclipboard("@sigmatop1jj"); Library:Notify("Copied", 3) end end)
 end)
 
--- IGNORE CHECK
+-- IGNORE / TARGET / VISIBLE
 local function IsIgnoredByAim(p)
     if not p or not Vars.AimbotIgnoreList then return false end
     return Vars.AimbotIgnoreList[p.Name] == true
@@ -327,22 +414,15 @@ local function IsIgnoredByTrigger(p)
     if not p or not Vars.TriggerBotIgnoreList then return false end
     return Vars.TriggerBotIgnoreList[p.Name] == true
 end
-
--- TARGET PART
 local function GetTargetPart(char, mode)
     if not char then return nil end
     mode = mode or "Head"
-    if mode == "Head" then
-        return char:FindFirstChild("Head") or char:FindFirstChild("UpperTorso") or char:FindFirstChild("Torso") or char:FindFirstChild("HumanoidRootPart")
-    elseif mode == "Torso" then
-        return char:FindFirstChild("UpperTorso") or char:FindFirstChild("Torso") or char:FindFirstChild("HumanoidRootPart") or char:FindFirstChild("Head")
-    elseif mode == "HumanoidRootPart" then
-        return char:FindFirstChild("HumanoidRootPart") or char:FindFirstChild("UpperTorso") or char:FindFirstChild("Torso") or char:FindFirstChild("Head")
+    if mode == "Head" then return char:FindFirstChild("Head") or char:FindFirstChild("UpperTorso") or char:FindFirstChild("Torso") or char:FindFirstChild("HumanoidRootPart")
+    elseif mode == "Torso" then return char:FindFirstChild("UpperTorso") or char:FindFirstChild("Torso") or char:FindFirstChild("HumanoidRootPart") or char:FindFirstChild("Head")
+    elseif mode == "HumanoidRootPart" then return char:FindFirstChild("HumanoidRootPart") or char:FindFirstChild("UpperTorso") or char:FindFirstChild("Torso") or char:FindFirstChild("Head")
     end
     return char:FindFirstChild("Head") or char:FindFirstChild("HumanoidRootPart")
 end
-
--- VISIBLE CHECK
 local excludeEnum = Enum.RaycastFilterType.Exclude or Enum.RaycastFilterType.Blacklist
 local function IsVisible(targetChar, mode)
     local ok, result = pcall(function()
@@ -408,7 +488,7 @@ RunService.RenderStepped:Connect(function()
     end)
 end)
 
--- HITBOX EXPANDER
+-- HITBOX
 local function ApplyHitbox(char)
     if not char then return end
     local hrp = char:FindFirstChild("HumanoidRootPart")
@@ -469,7 +549,7 @@ Players.PlayerRemoving:Connect(function(p)
     end
 end)
 
--- TRIGGER BOT (центр экрана)
+-- TRIGGER BOT
 local lastTriggerTime = 0
 local function ClickMouse()
     if mouse1click then pcall(mouse1click); return true end
@@ -537,12 +617,11 @@ RunService.RenderStepped:Connect(function()
         local color = Vars.FovCircleColor
         if Vars.FovCircleRainbow then color = Color3.fromHSV((tick()*0.5)%1,1,1) end
         local center = Vector2.new(Cam.ViewportSize.X/2, Cam.ViewportSize.Y/2)
-        local radius = Vars.AimbotFov
         if FovCircle then
             if not Vars.FovCircleEnabled then FovCircle.Visible = false; return end
             FovCircle.Visible = true
             FovCircle.Position = center
-            FovCircle.Radius = radius
+            FovCircle.Radius = Vars.AimbotFov
             FovCircle.Thickness = Vars.FovCircleThickness
             FovCircle.Filled = Vars.FovCircleFilled
             FovCircle.Color = color
@@ -554,34 +633,169 @@ RunService.RenderStepped:Connect(function()
             for i, l in ipairs(FovLines) do
                 local a1 = (i / #FovLines) * math.pi * 2
                 local a2 = ((i+1) / #FovLines) * math.pi * 2
-                l.From = center + Vector2.new(math.cos(a1), math.sin(a1)) * radius
-                l.To = center + Vector2.new(math.cos(a2), math.sin(a2)) * radius
+                l.From = center + Vector2.new(math.cos(a1), math.sin(a1)) * Vars.AimbotFov
+                l.To = center + Vector2.new(math.cos(a2), math.sin(a2)) * Vars.AimbotFov
                 l.Color = color; l.Thickness = Vars.FovCircleThickness; l.Visible = true
             end
         end
     end)
 end)
 
--- TRACERS
-local function CreateTracer()
+-- CROSSHAIR
+local crosshairLines = {}
+for i = 1, 12 do
+    local l = Drawing.new("Line")
+    l.Visible = false; l.Thickness = 1.5; l.Color = Color3.new(1,1,1); l.ZIndex = 5
+    table.insert(crosshairLines, l)
+end
+local crosshairDot = nil
+pcall(function()
+    crosshairDot = Drawing.new("Square")
+    crosshairDot.Visible = false; crosshairDot.Filled = true
+    crosshairDot.Thickness = 1; crosshairDot.Size = Vector2.new(3,3)
+    crosshairDot.Color = Color3.new(1,1,1); crosshairDot.ZIndex = 5
+end)
+local crosshairCircles = {}
+pcall(function()
+    local c = Drawing.new("Circle")
+    c.Visible = false; c.Thickness = 1.5; c.NumSides = 40
+    c.Filled = false; c.Transparency = 1; c.Color = Color3.new(1,1,1); c.ZIndex = 5
+    crosshairCircles[1] = c
+end)
+if not crosshairCircles[1] then
+    for i = 1, 40 do
+        local l = Drawing.new("Line")
+        l.Visible = false; l.Thickness = 1.5; l.Color = Color3.new(1,1,1); l.ZIndex = 5
+        table.insert(crosshairCircles, l)
+    end
+end
+
+local function UpdateCursorVisibility()
+    pcall(function()
+        if Vars.CrosshairHideCursor and Vars.CrosshairEnabled then
+            UIS.MouseIconEnabled = false
+        else
+            UIS.MouseIconEnabled = true
+        end
+    end)
+end
+
+local crosshairRot, crosshairElapsed = 0, 0
+RunService.RenderStepped:Connect(function(dt)
+    pcall(function()
+        dt = dt or 0
+        crosshairElapsed = crosshairElapsed + dt
+        crosshairRot = (crosshairRot + dt * Vars.CrosshairRotation) % 360
+
+        if not Vars.CrosshairEnabled then
+            for _, l in ipairs(crosshairLines) do l.Visible = false end
+            for _, c in ipairs(crosshairCircles) do c.Visible = false end
+            if crosshairDot then crosshairDot.Visible = false end
+            UpdateCursorVisibility()
+            return
+        end
+
+        local center = Vector2.new(Cam.ViewportSize.X / 2, Cam.ViewportSize.Y / 2)
+        local col = Vars.CrosshairColor
+        if Vars.CrosshairRainbow then col = Color3.fromHSV((crosshairElapsed * 0.5) % 1, 1, 1) end
+        local gap = Vars.CrosshairGap
+        if Vars.CrosshairPulse then
+            gap = gap + math.sin(crosshairElapsed * Vars.CrosshairPulseSpeed) * math.max(Vars.CrosshairGap * 0.4, 2)
+        end
+        local size = Vars.CrosshairSize
+        local thick = Vars.CrosshairThickness
+        local style = Vars.CrosshairStyle
+
+        for _, l in ipairs(crosshairLines) do l.Visible = false end
+        for _, c in ipairs(crosshairCircles) do c.Visible = false end
+        if crosshairDot then crosshairDot.Visible = false end
+
+        local function line(idx, angleDeg, fromDist, toDist)
+            local l = crosshairLines[idx]
+            if not l then return end
+            local ang = math.rad(angleDeg + crosshairRot)
+            local dx, dy = math.cos(ang), math.sin(ang)
+            l.From = Vector2.new(center.X + dx * fromDist, center.Y + dy * fromDist)
+            l.To = Vector2.new(center.X + dx * toDist, center.Y + dy * toDist)
+            l.Color = col; l.Thickness = thick; l.Visible = true
+        end
+
+        if style == "Cross" then
+            line(1, 0, gap, gap + size); line(2, 180, gap, gap + size)
+            line(3, 90, gap, gap + size); line(4, 270, gap, gap + size)
+        elseif style == "Plus" then
+            line(1, 0, 0, size); line(2, 180, 0, size)
+            line(3, 90, 0, size); line(4, 270, 0, size)
+        elseif style == "X" then
+            line(1, 45, gap, gap + size); line(2, 225, gap, gap + size)
+            line(3, 135, gap, gap + size); line(4, 315, gap, gap + size)
+        elseif style == "T-Shape" then
+            line(1, 0, gap, gap + size); line(2, 180, gap, gap + size)
+            line(3, 270, gap, gap + size)
+        elseif style == "Pinwheel" then
+            for i = 0, 3 do
+                local baseAngle = i * 90
+                line(i + 1, baseAngle, gap, gap + size)
+                local hookAngle = baseAngle + 90
+                local hookStart = gap + size * 0.7
+                local l = crosshairLines[5 + i]
+                if l then
+                    local ang = math.rad(hookAngle + crosshairRot)
+                    local baseRad = math.rad(baseAngle + crosshairRot)
+                    local sx = center.X + math.cos(baseRad) * hookStart
+                    local sy = center.Y + math.sin(baseRad) * hookStart
+                    l.From = Vector2.new(sx, sy)
+                    l.To = Vector2.new(sx + math.cos(ang) * size * 0.3, sy + math.sin(ang) * size * 0.3)
+                    l.Color = col; l.Thickness = thick; l.Visible = true
+                end
+            end
+        elseif style == "Star" then
+            for i = 0, 5 do line(i + 1, i * 60, gap, gap + size) end
+        elseif style == "Peace" then
+            line(1, 0, gap, gap + size); line(2, 90, gap, gap + size)
+            line(3, 180, gap, gap + size); line(4, 270, gap, gap + size)
+            line(5, 45, gap, gap + size * 0.8); line(6, 135, gap, gap + size * 0.8)
+        elseif style == "Circle" then
+            local circleRadius = size
+            if crosshairCircles[1] and crosshairCircles[1].Type and crosshairCircles[1].Type.Name == "Circle" then
+                local c = crosshairCircles[1]
+                c.Position = center; c.Radius = circleRadius
+                c.Thickness = thick; c.Color = col; c.Visible = true
+            else
+                for i, l in ipairs(crosshairCircles) do
+                    local a1 = ((i - 1) / #crosshairCircles) * math.pi * 2
+                    local a2 = (i / #crosshairCircles) * math.pi * 2
+                    l.From = center + Vector2.new(math.cos(a1), math.sin(a1)) * circleRadius
+                    l.To = center + Vector2.new(math.cos(a2), math.sin(a2)) * circleRadius
+                    l.Color = col; l.Thickness = thick; l.Visible = true
+                end
+            end
+        end
+
+        if crosshairDot and (Vars.CrosshairDot or style == "Dot") then
+            local ds = style == "Dot" and math.max(thick, 2) or 3
+            crosshairDot.Size = Vector2.new(ds, ds)
+            crosshairDot.Position = Vector2.new(center.X - ds/2, center.Y - ds/2)
+            crosshairDot.Color = col; crosshairDot.Visible = true
+        end
+
+        UpdateCursorVisibility()
+    end)
+end)
+
+-- TRACER
+local function CreateTracer(muzzlePart)
     pcall(function()
         if not Vars.TracerEnabled then return end
         local char = LP.Character
-        if not char then return end
-        local muzzle = nil
-        local tool = char:FindFirstChildOfClass("Tool")
-        if tool then
-            muzzle = tool:FindFirstChild("Handle") or tool:FindFirstChild("Barrel") or tool:FindFirstChild("Muzzle") or tool:FindFirstChildWhichIsA("BasePart")
-        end
-        if not muzzle then muzzle = char:FindFirstChild("RightHand") or char:FindFirstChild("Right Arm") or char:FindFirstChild("HumanoidRootPart") end
-        if not muzzle then return end
+        if not char or not muzzlePart then return end
+        local startPos = muzzlePart.Position
         local origin = Cam.CFrame.Position
         local params = RaycastParams.new()
         params.FilterType = excludeEnum
         params.FilterDescendantsInstances = {char, Cam}
         local res = workspace:Raycast(origin, Cam.CFrame.LookVector * 1000, params)
         local hitPos = res and res.Position or (origin + Cam.CFrame.LookVector * 1000)
-        local startPos = muzzle.Position
         local dist = (hitPos - startPos).Magnitude
         if dist < 1 then return end
         local tracer = Instance.new("Part")
@@ -603,76 +817,98 @@ local function CreateTracer()
             light.Color = Vars.TracerColor; light.Brightness = 3; light.Range = 8
             light.Parent = tracer
         end
-        local tween = TweenService:Create(tracer, TweenInfo.new(Vars.TracerLifetime, Enum.EasingStyle.Linear), { Transparency = 1 })
-        tween:Play()
+        TweenService:Create(tracer, TweenInfo.new(Vars.TracerLifetime, Enum.EasingStyle.Linear), { Transparency = 1 }):Play()
         Debris:AddItem(tracer, Vars.TracerLifetime + 0.1)
     end)
 end
 
--- HIT SOUNDS
-local hitSoundOriginals = {}
-local function ApplyHitSoundToTool(tool)
-    if not tool or not tool:IsA("Tool") then return end
-    task.spawn(function()
-        local ba = tool:FindFirstChild("BodyAttach") or tool:WaitForChild("BodyAttach", 5)
-        if ba then
-            for _, sn in ipairs({"HitClient","HeadShotClient","HitCharacterClient"}) do
-                local s = ba:FindFirstChild(sn) or ba:WaitForChild(sn, 3)
-                if s and s:IsA("Sound") then
-                    if not hitSoundOriginals[s] then
-                        hitSoundOriginals[s] = { SoundId = s.SoundId, Volume = s.Volume }
-                    end
-                    local id = HSList[Vars.HitSoundChoice] or ""
-                    if id ~= "" then s.SoundId = id
-                    else
-                        local o = hitSoundOriginals[s]
-                        if o then s.SoundId = o.SoundId end
-                    end
-                    s.Volume = Vars.HitSoundVolume
-                end
-            end
-        end
+-- HIT SOUND
+local lastShotTick = 0
+local hitSoundConns = {}
+local lastHitSoundTick = 0
+
+local function PlayHitSound()
+    if not Vars.HitSoundEnabled or Vars.HitSoundChoice == "None" then return end
+    local now = tick()
+    if now - lastHitSoundTick < 0.05 then return end
+    lastHitSoundTick = now
+    local id = HSList[Vars.HitSoundChoice] or ""
+    if id == "" then return end
+    pcall(function()
+        local snd = Instance.new("Sound")
+        snd.SoundId = id; snd.Volume = Vars.HitSoundVolume
+        snd.Parent = LP.Character or workspace
+        snd:Play()
+        Debris:AddItem(snd, 3)
     end)
 end
-local function ApplyHitSoundToChar(ch)
-    if not ch then return end
-    for _, c in ipairs(ch:GetChildren()) do
-        if c:IsA("Tool") then ApplyHitSoundToTool(c) end
-    end
-end
-local function RestoreHitSounds()
-    for snd, d in pairs(hitSoundOriginals) do
-        if snd and snd.Parent then pcall(function() snd.SoundId = d.SoundId; snd.Volume = d.Volume end) end
-    end
-    hitSoundOriginals = {}
-end
 
--- LMB HOOK: трассер + custom shoot sound
-local lastShootSound = 0
-UIS.InputBegan:Connect(function(input, processed)
-    if processed then return end
-    if input.UserInputType ~= Enum.UserInputType.MouseButton1 then return end
-    CreateTracer()
-    if Vars.CustomShootSoundEnabled and Vars.CustomShootSoundChoice ~= "None" then
-        local char = LP.Character
-        if not char then return end
-        if not char:FindFirstChildOfClass("Tool") then return end
-        local now = tick()
-        if now - lastShootSound < 0.05 then return end
-        lastShootSound = now
-        local id = ShootSoundList[Vars.CustomShootSoundChoice] or ""
-        if id == "" then return end
-        pcall(function()
-            local snd = Instance.new("Sound")
-            snd.SoundId = id; snd.Volume = Vars.CustomShootSoundVolume
-            snd.Parent = char
-            snd:Play()
-            Debris:AddItem(snd, 3)
+local function HookHitSoundForPlayer(p)
+    if p == LP then return end
+    local function bind(char)
+        local hum = char:WaitForChild("Humanoid", 5)
+        if not hum then return end
+        local conn = hum.HealthChanged:Connect(function(newH)
+            if not Vars.HitSoundEnabled then return end
+            if tick() - lastShotTick > 0.35 then return end
+            if hum.Health <= 0 then return end
+            PlayHitSound()
         end)
+        hitSoundConns[p] = conn
     end
+    if p.Character then bind(p.Character) end
+    p.CharacterAdded:Connect(bind)
+end
+for _, p in ipairs(Players:GetPlayers()) do HookHitSoundForPlayer(p) end
+Players.PlayerAdded:Connect(HookHitSoundForPlayer)
+Players.PlayerRemoving:Connect(function(p)
+    if hitSoundConns[p] then pcall(function() hitSoundConns[p]:Disconnect() end); hitSoundConns[p] = nil end
 end)
 
--- MOVEMENT
+-- CUSTOM SHOOT SOUND
+local function PlayShootSound()
+    if not Vars.CustomShootSoundEnabled or Vars.CustomShootSoundChoice == "None" then return end
+    local id = ShootSoundList[Vars.CustomShootSoundChoice] or ""
+    if id == "" then return end
+    pcall(function()
+        local snd = Instance.new("Sound")
+        snd.SoundId = id; snd.Volume = Vars.CustomShootSoundVolume
+        snd.Parent = LP.Character
+        snd:Play()
+        Debris:AddItem(snd, 3)
+    end)
+end
+
+-- FIRE RATE LOOP
+local lastTracerTime, lastShootSoundTime = 0, 0
+RunService.Heartbeat:Connect(function()
+    pcall(function()
+        if not mouseStates.MouseButton1 then return end
+        local char = LP.Character
+        if not char then return end
+        local tool = char:FindFirstChildOfClass("Tool")
+        if not tool or not IsGunTool(tool) then return end
+        local fireRate = GetFireRate(tool)
+        local now = tick()
+
+        if now - lastTracerTime >= fireRate then
+            if Vars.TracerEnabled then
+                local muzzle = GetMuzzle(tool, char)
+                if muzzle then CreateTracer(muzzle) end
+            end
+            lastTracerTime = now
+        end
+
+        if now - lastShootSoundTime >= fireRate then
+            if Vars.CustomShootSoundEnabled then PlayShootSound() end
+            lastShootSoundTime = now
+        end
+
+        lastShotTick = now
+    end)
+end)
+
+-- MOVEMENT + SPIDER + NOCLIP
 RunService.Heartbeat:Connect(function()
     pcall(function()
         local char = LP.Character
@@ -693,8 +929,42 @@ RunService.Heartbeat:Connect(function()
             if UIS:IsKeyDown(Enum.KeyCode.D) then dir = dir + Cam.CFrame.RightVector end
             root.Velocity = dir * Vars.FlySpeed + Vector3.new(0, 0.5, 0)
         end
+        -- SPIDER
+        if Vars.SpiderEnabled and hum and UIS:IsKeyDown(Enum.KeyCode.W) then
+            local rayParams = RaycastParams.new()
+            rayParams.FilterType = excludeEnum
+            rayParams.FilterDescendantsInstances = {char}
+            local ray = workspace:Raycast(root.Position, root.CFrame.LookVector * 2.5, rayParams)
+            if ray and math.abs(ray.Normal.Y) < 0.5 then
+                root.Velocity = Vector3.new(root.Velocity.X, Vars.SpiderSpeed, root.Velocity.Z)
+            end
+        end
+        -- NOCLIP
+        if Vars.NoclipEnabled then
+            for _, part in ipairs(char:GetDescendants()) do
+                if part:IsA("BasePart") and part.CanCollide then
+                    pcall(function() part.CanCollide = false end)
+                end
+            end
+        end
         if Vars.Spinbot then
             root.CFrame = root.CFrame * CFrame.Angles(0, math.rad(Vars.SpinSpeed), 0)
+        end
+    end)
+end)
+
+-- NOCLIP auto-restore
+task.spawn(function()
+    task.wait(2)
+    pcall(function()
+        if Toggles and Toggles.NoclipEnabled then
+            Toggles.NoclipEnabled:OnChanged(function(v)
+                if not v and LP.Character then
+                    for _, part in ipairs(LP.Character:GetDescendants()) do
+                        if part:IsA("BasePart") then pcall(function() part.CanCollide = true end) end
+                    end
+                end
+            end)
         end
     end)
 end)
@@ -737,7 +1007,7 @@ RunService.Heartbeat:Connect(function()
             if not (CCFx and CCFx.Parent) then CCFx = Instance.new("ColorCorrectionEffect"); CCFx.Name = "SigmaCC"; CCFx.Parent = Lighting end
             CCFx.Saturation = Vars.Saturation; CCFx.Contrast = Vars.Contrast; CCFx.TintColor = Vars.CCTint
         elseif CCFx then CCFx:Destroy(); CCFx = nil end
-        if Vars.FovChanger then Cam.FieldOfView = Vars.FovValue
+        if Vars.FovChanger then Cam.FieldOfView = math.clamp(Vars.FovValue or 70, 1, 240)
         else Cam.FieldOfView = 70 end
     end)
 end)
@@ -783,7 +1053,6 @@ function ApplyOptimization()
     pcall(function() settings().Rendering.QualityLevel = Vars.OptQuality end)
     pcall(function() Library:Notify("Optimization applied", 3) end)
 end
-
 function RestoreGraphics()
     for _, p in ipairs(RemovedParticles) do pcall(function() if p and p.Parent then p.Enabled = true end end) end
     RemovedParticles = {}
@@ -812,10 +1081,7 @@ function MakeESP(p)
     if not p or p == LP then return end
     if ESP_Data[p] then for _, d in pairs(ESP_Data[p]) do pcall(function() d:Remove() end) end end
     local ok, data = pcall(function()
-        return {
-            box=Drawing.new("Square"), name=Drawing.new("Text"),
-            dist=Drawing.new("Text"), health=Drawing.new("Square"),
-        }
+        return { box=Drawing.new("Square"), name=Drawing.new("Text"), dist=Drawing.new("Text"), health=Drawing.new("Square") }
     end)
     if not ok or not data then return end
     pcall(function()
@@ -843,22 +1109,19 @@ RunService.RenderStepped:Connect(function()
             local hide = not p.Character or not p.Character:FindFirstChild("HumanoidRootPart") or not myRoot
             if not hide and Vars.ESPTeamCheck and p.Team == LP.Team then hide = true end
             if hide then
-                data.box.Visible=false; data.name.Visible=false
-                data.dist.Visible=false; data.health.Visible=false
+                data.box.Visible=false; data.name.Visible=false; data.dist.Visible=false; data.health.Visible=false
             else
                 local root = p.Character.HumanoidRootPart
                 local hum = p.Character:FindFirstChildOfClass("Humanoid")
                 local head = p.Character:FindFirstChild("Head") or root
                 local distStuds = (myRoot.Position - root.Position).Magnitude
                 if distStuds > Vars.ESPMaxDistance then
-                    data.box.Visible=false; data.name.Visible=false
-                    data.dist.Visible=false; data.health.Visible=false
+                    data.box.Visible=false; data.name.Visible=false; data.dist.Visible=false; data.health.Visible=false
                 else
                     local pos, onScreen = Cam:WorldToViewportPoint(root.Position)
                     local headPos = Cam:WorldToViewportPoint(head.Position + Vector3.new(0,0.5,0))
                     if not onScreen then
-                        data.box.Visible=false; data.name.Visible=false
-                        data.dist.Visible=false; data.health.Visible=false
+                        data.box.Visible=false; data.name.Visible=false; data.dist.Visible=false; data.health.Visible=false
                     else
                         local height = math.abs(pos.Y - headPos.Y) * 2.2
                         local width = height * 0.6
@@ -871,12 +1134,10 @@ RunService.RenderStepped:Connect(function()
                         data.name.Color = Vars.ESPTextColor
                         data.name.Text = p.Name
                         data.name.Position = Vector2.new(pos.X, boxPos.Y - 36)
-                        data.name.Center = true
                         data.dist.Visible = Vars.ESPDistance
                         data.dist.Color = Vars.ESPTextColor
                         data.dist.Text = "[" .. math.floor(distStuds) .. "m]"
                         data.dist.Position = Vector2.new(pos.X, boxPos.Y - 20)
-                        data.dist.Center = true
                         if Vars.ESPHealthBar and hum then
                             data.health.Visible = true
                             local hp = hum.Health / hum.MaxHealth
@@ -935,22 +1196,9 @@ RunService.Heartbeat:Connect(function()
 end)
 Players.PlayerRemoving:Connect(RemoveChams)
 
--- AUTO REAPPLY
-local function OnCharAdded(ch)
-    task.wait(1)
-    if Vars.HitSoundEnabled then ApplyHitSoundToChar(ch) end
-    ch.ChildAdded:Connect(function(c)
-        if Vars.HitSoundEnabled and c:IsA("Tool") then
-            task.delay(0.3, function() ApplyHitSoundToTool(c) end)
-        end
-    end)
-end
-if LP.Character then OnCharAdded(LP.Character) end
-LP.CharacterAdded:Connect(OnCharAdded)
-
 task.spawn(function()
     task.wait(1)
-    pcall(function() Library:Notify("Sigma Universal v2.8 loaded!", 5) end)
+    pcall(function() Library:Notify("Sigma Universal v3.2 loaded!", 5) end)
 end)
-print("=== Sigma Universal v2.8 READY ===")
+print("=== Sigma Universal v3.2 READY ===")
 print("Author: @sigmatop1jj")
