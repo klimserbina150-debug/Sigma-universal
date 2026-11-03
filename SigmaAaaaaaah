@@ -1,10 +1,7 @@
--- Sigma Universal v2.0 (Fallback Mode)
+-- Sigma Universal v2.5
 -- by @sigmatop1jj
 
-if getgenv().SigmaLoaded then
-    warn("Sigma already loaded!")
-    return
-end
+if getgenv().SigmaLoaded then warn("Sigma already loaded!") return end
 getgenv().SigmaLoaded = true
 
 local repo = "https://raw.githubusercontent.com/violin-suzutsuki/LinoriaLib/main/"
@@ -12,7 +9,7 @@ local Library = loadstring(game:HttpGet(repo .. "Library.lua"))()
 
 local Window = Library:CreateWindow({
     Title = "Sigma Universal",
-    Footer = "by @sigmatop1jj | v2.0",
+    Footer = "by @sigmatop1jj | v2.5",
     Center = true, AutoShow = true, Resizable = true,
 })
 
@@ -22,15 +19,18 @@ local UIS = game:GetService("UserInputService")
 local Lighting = game:GetService("Lighting")
 local LP = Players.LocalPlayer
 local Cam = workspace.CurrentCamera
-
 local VEC0 = Vector3.new(0, 0, 0)
 
--- ============================================================
--- СВОИ ПЕРЕМЕННЫЕ — НЕ ЗАВИСИМ ОТ Options/Toggles
--- ============================================================
 local Vars = {
     AimbotEnabled=false, AimbotVisibleCheck=true, AimbotFov=150,
     AimbotSmoothness=5, AimbotPrediction=0.165, AimbotMultipoint=true,
+    AimbotAlways=false, AimbotTarget="Head", AimbotMaxDistance=1500,
+    AimbotKeybind="MouseButton2",
+    AimbotIgnoreList={},  -- 🔥 NEW
+    TriggerBotEnabled=false, TriggerBotFov=25, TriggerBotDelay=0.1,
+    TriggerBotVisibleCheck=true, TriggerBotTarget="Head", TriggerBotMaxDistance=500,
+    TriggerBotIgnoreList={},  -- 🔥 NEW
+    HitboxEnabled=false, HitboxScale=2, HitboxTeamCheck=true,
     FovCircleEnabled=true, FovCircleFilled=false, FovCircleThickness=2,
     FovCircleRainbow=false, FovCircleColor=Color3.fromRGB(255,255,255),
     Fullbright=false, Brightness=2, NoFog=false, NoShadows=false,
@@ -53,34 +53,38 @@ local Vars = {
     OptNoWaterWaves=true, OptNoTextures=false, OptQuality=1,
 }
 
--- ============================================================
--- ХЕЛПЕРЫ для AddToggle/AddSlider/AddColor — пишут в Vars
--- ============================================================
+local Options, Toggles = Library.Options, Library.Toggles
+
 local function T(box, key, text, default)
-    box:AddToggle(key, {
-        Text=text, Default = default or Vars[key],
-        Callback=function(v) Vars[key] = v end,
-    })
+    box:AddToggle(key, { Text=text, Default = default or Vars[key], Callback=function(v) Vars[key] = v end })
 end
-
 local function S(box, key, text, default, min, max, rounding)
-    box:AddSlider(key, {
-        Text=text, Default = default or Vars[key],
-        Min=min, Max=max, Rounding=rounding or 0,
-        Callback=function(v) Vars[key] = v end,
-    })
+    box:AddSlider(key, { Text=text, Default = default or Vars[key], Min=min, Max=max, Rounding=rounding or 0, Callback=function(v) Vars[key] = v end })
 end
-
 local function C(box, key, text, default)
-    box:AddLabel(text):AddColorPicker(key, {
-        Default = default or Vars[key],
-        Callback=function(v) Vars[key] = v end,
-    })
+    box:AddLabel(text):AddColorPicker(key, { Default = default or Vars[key], Callback=function(v) Vars[key] = v end })
 end
 
--- ============================================================
--- ВКЛАДКИ
--- ============================================================
+-- 🔥 Функция для обновления списка игроков в dropdown
+local function UpdateIgnoreLists()
+    local names = {}
+    for _, p in ipairs(Players:GetPlayers()) do
+        if p ~= LP then table.insert(names, p.Name) end
+    end
+    table.sort(names)
+
+    pcall(function()
+        if Options and Options.AimbotIgnoreList then
+            Options.AimbotIgnoreList:SetValues(names)
+        end
+    end)
+    pcall(function()
+        if Options and Options.TriggerBotIgnoreList then
+            Options.TriggerBotIgnoreList:SetValues(names)
+        end
+    end)
+end
+
 local Combat = Window:AddTab("Combat")
 local Visuals = Window:AddTab("Visuals")
 local ESPTab = Window:AddTab("ESP")
@@ -91,11 +95,58 @@ local Settings = Window:AddTab("Settings")
 -- COMBAT
 local CG = Combat:AddLeftGroupbox("Aimbot")
 T(CG,"AimbotEnabled","Aimbot",false)
+T(CG,"AimbotAlways","Auto Aim (no key needed)",false)
+CG:AddLabel("Aim Keybind"):AddKeyPicker("AimKeybind", {
+    Default = "MouseButton2",
+    Text = "Aim Key",
+    Callback = function(v)
+        if type(v) == "table" then Vars.AimbotKeybind = v.Key or "MouseButton2"
+        else Vars.AimbotKeybind = v end
+    end,
+})
 T(CG,"AimbotVisibleCheck","Visible Check",true)
+CG:AddDropdown("AimbotTarget", {
+    Text = "Target Part",
+    Values = {"Head", "Torso", "HumanoidRootPart"},
+    Default = "Head",
+    Callback = function(v) Vars.AimbotTarget = v end,
+})
+CG:AddDropdown("AimbotIgnoreList", {  -- 🔥 NEW
+    Text = "Ignore Players",
+    Values = {},
+    Default = {},
+    Multi = true,
+    Callback = function(v) Vars.AimbotIgnoreList = v or {} end,
+})
 S(CG,"AimbotFov","FOV",150,10,800,0)
+S(CG,"AimbotMaxDistance","Max Distance (studs)",1500,0,10000,0)
 S(CG,"AimbotSmoothness","Smoothness",5,1,20,0)
 S(CG,"AimbotPrediction","Prediction",0.165,0,0.5,3)
-T(CG,"AimbotMultipoint","Head Shot",true)
+
+local HB = Combat:AddLeftGroupbox("Hitbox Expander")
+T(HB,"HitboxEnabled","Hitbox Expander",false)
+S(HB,"HitboxScale","Hitbox Scale (x)",2,1,10,1)
+T(HB,"HitboxTeamCheck","Team Check",true)
+
+local TB = Combat:AddLeftGroupbox("Trigger Bot")
+T(TB,"TriggerBotEnabled","Trigger Bot",false)
+T(TB,"TriggerBotVisibleCheck","Visible Check",true)
+TB:AddDropdown("TriggerBotTarget", {
+    Text = "Target Part",
+    Values = {"Head", "Torso", "HumanoidRootPart"},
+    Default = "Head",
+    Callback = function(v) Vars.TriggerBotTarget = v end,
+})
+TB:AddDropdown("TriggerBotIgnoreList", {  -- 🔥 NEW
+    Text = "Ignore Players",
+    Values = {},
+    Default = {},
+    Multi = true,
+    Callback = function(v) Vars.TriggerBotIgnoreList = v or {} end,
+})
+S(TB,"TriggerBotFov","Trigger FOV (pixels)",25,1,300,0)
+S(TB,"TriggerBotMaxDistance","Max Distance (studs)",500,0,10000,0)
+S(TB,"TriggerBotDelay","Delay (seconds)",0.1,0.01,1,2)
 
 local FOVC = Combat:AddRightGroupbox("Aim FOV Circle")
 T(FOVC,"FovCircleEnabled","Show Circle",true)
@@ -103,6 +154,14 @@ T(FOVC,"FovCircleFilled","Filled",false)
 S(FOVC,"FovCircleThickness","Thickness",2,1,10,0)
 T(FOVC,"FovCircleRainbow","Rainbow",false)
 C(FOVC,"FovCircleColor","Color",Color3.fromRGB(255,255,255))
+
+-- Первичное заполнение + автообновление
+task.spawn(function()
+    task.wait(1)
+    UpdateIgnoreLists()
+end)
+Players.PlayerAdded:Connect(function() task.wait(1) UpdateIgnoreLists() end)
+Players.PlayerRemoving:Connect(function() task.wait(0.5) UpdateIgnoreLists() end)
 
 -- VISUALS
 local VG = Visuals:AddLeftGroupbox("Fullbright")
@@ -196,7 +255,7 @@ SG:AddLabel("Menu Keybind (RightShift)")
 SG:AddButton("Unload", function() pcall(function() Library:Unload() end) end)
 
 local CreditGroup = Settings:AddRightGroupbox("Credits")
-CreditGroup:AddLabel("Script: Sigma Universal v2.0")
+CreditGroup:AddLabel("Script: Sigma Universal v2.5")
 CreditGroup:AddLabel("Author: @sigmatop1jj")
 CreditGroup:AddDivider()
 CreditGroup:AddButton("Copy Telegram", function()
@@ -209,43 +268,95 @@ CreditGroup:AddButton("Copy Telegram", function()
 end)
 
 -- ============================================================
+-- KEYBIND CHECKER
+-- ============================================================
+local function IsKeybindActive(keyStr)
+    if not keyStr or keyStr == "" then return false end
+    keyStr = tostring(keyStr)
+    if keyStr:find("MouseButton") then
+        local ok, inputType = pcall(function() return Enum.UserInputType[keyStr] end)
+        if ok and inputType then return UIS:IsMouseButtonPressed(inputType) end
+    end
+    local ok, keycode = pcall(function() return Enum.KeyCode[keyStr] end)
+    if ok and keycode then return UIS:IsKeyDown(keycode) end
+    return false
+end
+
+-- ============================================================
+-- IGNORE CHECK 🔥
+-- ============================================================
+local function IsIgnoredByAim(p)
+    if not p or not Vars.AimbotIgnoreList then return false end
+    return Vars.AimbotIgnoreList[p.Name] == true
+end
+
+local function IsIgnoredByTrigger(p)
+    if not p or not Vars.TriggerBotIgnoreList then return false end
+    return Vars.TriggerBotIgnoreList[p.Name] == true
+end
+
+-- ============================================================
+-- TARGET PART RESOLVER
+-- ============================================================
+local function GetTargetPart(char, targetMode)
+    if not char then return nil end
+    targetMode = targetMode or "Head"
+    if targetMode == "Head" then
+        return char:FindFirstChild("Head") or char:FindFirstChild("UpperTorso")
+            or char:FindFirstChild("Torso") or char:FindFirstChild("HumanoidRootPart")
+    elseif targetMode == "Torso" then
+        return char:FindFirstChild("UpperTorso") or char:FindFirstChild("Torso")
+            or char:FindFirstChild("HumanoidRootPart") or char:FindFirstChild("Head")
+    elseif targetMode == "HumanoidRootPart" then
+        return char:FindFirstChild("HumanoidRootPart") or char:FindFirstChild("UpperTorso")
+            or char:FindFirstChild("Torso") or char:FindFirstChild("Head")
+    end
+    return char:FindFirstChild("Head") or char:FindFirstChild("HumanoidRootPart")
+end
+
+-- ============================================================
 -- VISIBLE CHECK
 -- ============================================================
 local excludeEnum = Enum.RaycastFilterType.Exclude or Enum.RaycastFilterType.Blacklist
 
-local function IsVisible(targetChar)
+local function IsVisible(targetChar, targetMode)
     local ok, result = pcall(function()
         if not targetChar then return false end
         local myChar = LP.Character
         if not myChar then return false end
         local myRoot = myChar:FindFirstChild("HumanoidRootPart")
-        local targetRoot = targetChar:FindFirstChild("HumanoidRootPart")
-        local targetHead = targetChar:FindFirstChild("Head") or targetRoot
-        if not myRoot or not targetRoot or not targetHead then return false end
+        local targetPart = GetTargetPart(targetChar, targetMode)
+        if not myRoot or not targetPart then return false end
         local origin = Cam.CFrame.Position
-        local targetPos = Vars.AimbotMultipoint and targetHead.Position or targetRoot.Position
         local params = RaycastParams.new()
         params.FilterType = excludeEnum
         params.FilterDescendantsInstances = {myChar, targetChar, Cam}
-        local res = workspace:Raycast(origin, (targetPos - origin), params)
+        local res = workspace:Raycast(origin, (targetPart.Position - origin), params)
         return res == nil
     end)
     return ok and result or false
 end
 
 -- ============================================================
--- AIMBOT (использует Vars.*)
+-- AIMBOT (с ignore list)
 -- ============================================================
 local function GetClosestPlayer()
     local ok, result = pcall(function()
+        local myRoot = LP.Character and LP.Character:FindFirstChild("HumanoidRootPart")
+        if not myRoot then return nil end
         local target, shortest = nil, Vars.AimbotFov
         for _, p in ipairs(Players:GetPlayers()) do
             if p ~= LP and p.Character and p.Character:FindFirstChild("HumanoidRootPart") then
                 if Vars.ESPTeamCheck and p.Team == LP.Team then continue end
+                if IsIgnoredByAim(p) then continue end  -- 🔥 IGNORE CHECK
                 local hum = p.Character:FindFirstChildOfClass("Humanoid")
                 if hum and hum.Health > 0 then
-                    if Vars.AimbotVisibleCheck and not IsVisible(p.Character) then continue end
-                    local pos, onScreen = Cam:WorldToViewportPoint(p.Character.HumanoidRootPart.Position)
+                    local pRoot = p.Character.HumanoidRootPart
+                    if (myRoot.Position - pRoot.Position).Magnitude > Vars.AimbotMaxDistance then continue end
+                    if Vars.AimbotVisibleCheck and not IsVisible(p.Character, Vars.AimbotTarget) then continue end
+                    local targetPart = GetTargetPart(p.Character, Vars.AimbotTarget)
+                    if not targetPart then continue end
+                    local pos, onScreen = Cam:WorldToViewportPoint(targetPart.Position)
                     if onScreen then
                         local d = (Vector2.new(pos.X, pos.Y) - UIS:GetMouseLocation()).Magnitude
                         if d < shortest then shortest = d; target = p.Character end
@@ -261,20 +372,147 @@ end
 RunService.RenderStepped:Connect(function()
     pcall(function()
         if not Vars.AimbotEnabled then return end
-        if not UIS:IsMouseButtonPressed(Enum.UserInputType.MouseButton2) then return end
+        if not Vars.AimbotAlways and not IsKeybindActive(Vars.AimbotKeybind) then return end
         local t = GetClosestPlayer()
-        if t and t:FindFirstChild("HumanoidRootPart") then
-            local root = t.HumanoidRootPart
-            local head = t:FindFirstChild("Head") or root
-            local targetPos = Vars.AimbotMultipoint and head.Position or root.Position
-            local pred = targetPos + root.Velocity * Vars.AimbotPrediction
-            Cam.CFrame = Cam.CFrame:Lerp(CFrame.new(Cam.CFrame.Position, pred), 1 / Vars.AimbotSmoothness)
+        if t then
+            local targetPart = GetTargetPart(t, Vars.AimbotTarget)
+            local root = t:FindFirstChild("HumanoidRootPart")
+            if targetPart and root then
+                local targetPos = targetPart.Position + root.Velocity * Vars.AimbotPrediction
+                Cam.CFrame = Cam.CFrame:Lerp(CFrame.new(Cam.CFrame.Position, targetPos), 1 / Vars.AimbotSmoothness)
+            end
         end
     end)
 end)
 
 -- ============================================================
--- FOV CIRCLE (Circle + fallback на 60 линий)
+-- HITBOX EXPANDER
+-- ============================================================
+local function ApplyHitbox(char)
+    if not char then return end
+    local hrp = char:FindFirstChild("HumanoidRootPart")
+    if not hrp then return end
+    local old = char:FindFirstChild("SigmaHitbox")
+    if old then pcall(function() old:Destroy() end) end
+    local hitbox = Instance.new("Part")
+    hitbox.Name = "SigmaHitbox"
+    hitbox.Size = hrp.Size * Vars.HitboxScale
+    hitbox.Transparency = 1
+    hitbox.CanCollide = false
+    hitbox.CanQuery = true
+    hitbox.CanTouch = true
+    hitbox.Massless = true
+    hitbox.Anchored = false
+    hitbox.Parent = char
+    local weld = Instance.new("WeldConstraint")
+    weld.Part0 = hitbox
+    weld.Part1 = hrp
+    weld.Parent = hitbox
+    hitbox.CFrame = hrp.CFrame
+end
+
+RunService.Heartbeat:Connect(function()
+    pcall(function()
+        if not Vars.HitboxEnabled then
+            for _, p in ipairs(Players:GetPlayers()) do
+                if p ~= LP and p.Character then
+                    local hb = p.Character:FindFirstChild("SigmaHitbox")
+                    if hb then pcall(function() hb:Destroy() end) end
+                end
+            end
+            return
+        end
+        for _, p in ipairs(Players:GetPlayers()) do
+            if p ~= LP and p.Character then
+                if Vars.HitboxTeamCheck and p.Team == LP.Team then
+                    local hb = p.Character:FindFirstChild("SigmaHitbox")
+                    if hb then pcall(function() hb:Destroy() end) end
+                    continue
+                end
+                local hrp = p.Character:FindFirstChild("HumanoidRootPart")
+                if hrp then
+                    local hb = p.Character:FindFirstChild("SigmaHitbox")
+                    if not hb then ApplyHitbox(p.Character)
+                    else
+                        local expected = hrp.Size * Vars.HitboxScale
+                        if hb.Size ~= expected then hb.Size = expected end
+                    end
+                end
+            end
+        end
+    end)
+end)
+
+Players.PlayerRemoving:Connect(function(p)
+    if p.Character then
+        local hb = p.Character:FindFirstChild("SigmaHitbox")
+        if hb then pcall(function() hb:Destroy() end) end
+    end
+end)
+
+-- ============================================================
+-- TRIGGER BOT (с ignore list)
+-- ============================================================
+local lastTriggerTime = 0
+
+local function ClickMouse()
+    if mouse1click then pcall(mouse1click); return true end
+    if mouse1press and mouse1release then
+        pcall(function() mouse1press(); task.wait(0.02); mouse1release() end); return true
+    end
+    if keypress and keyrelease then
+        pcall(function() keypress(0x01); task.wait(0.02); keyrelease(0x01) end); return true
+    end
+    pcall(function()
+        local VIM = game:GetService("VirtualInputManager")
+        local mouseLoc = UIS:GetMouseLocation()
+        VIM:SendMouseButtonEvent(mouseLoc.X, mouseLoc.Y, 0, true, game, 0)
+        task.wait(0.02)
+        VIM:SendMouseButtonEvent(mouseLoc.X, mouseLoc.Y, 0, false, game, 0)
+    end)
+    return true
+end
+
+RunService.RenderStepped:Connect(function()
+    pcall(function()
+        if not Vars.TriggerBotEnabled then return end
+        local now = tick()
+        if now - lastTriggerTime < Vars.TriggerBotDelay then return end
+        local myRoot = LP.Character and LP.Character:FindFirstChild("HumanoidRootPart")
+        if not myRoot then return end
+        local mouseLoc = UIS:GetMouseLocation()
+        local foundTarget = false
+
+        for _, p in ipairs(Players:GetPlayers()) do
+            if p ~= LP and p.Character and p.Character:FindFirstChild("HumanoidRootPart") then
+                if Vars.ESPTeamCheck and p.Team == LP.Team then continue end
+                if IsIgnoredByTrigger(p) then continue end  -- 🔥 IGNORE CHECK
+                local hum = p.Character:FindFirstChildOfClass("Humanoid")
+                if hum and hum.Health > 0 then
+                    local pRoot = p.Character.HumanoidRootPart
+                    if (myRoot.Position - pRoot.Position).Magnitude > Vars.TriggerBotMaxDistance then continue end
+                    if Vars.TriggerBotVisibleCheck and not IsVisible(p.Character, Vars.TriggerBotTarget) then continue end
+                    local targetPart = GetTargetPart(p.Character, Vars.TriggerBotTarget)
+                    if targetPart then
+                        local pos, onScreen = Cam:WorldToViewportPoint(targetPart.Position)
+                        if onScreen then
+                            local d = (Vector2.new(pos.X, pos.Y) - mouseLoc).Magnitude
+                            if d < Vars.TriggerBotFov then foundTarget = true; break end
+                        end
+                    end
+                end
+            end
+        end
+
+        if foundTarget then
+            ClickMouse()
+            lastTriggerTime = now
+        end
+    end)
+end)
+
+-- ============================================================
+-- FOV CIRCLE
 -- ============================================================
 local FovCircle, FovLines = nil, nil
 pcall(function()
@@ -284,8 +522,7 @@ end)
 if not FovCircle then
     FovLines = {}
     for i = 1, 60 do
-        local l = Drawing.new("Line")
-        l.Visible = false; l.Thickness = 2
+        local l = Drawing.new("Line"); l.Visible = false; l.Thickness = 2
         table.insert(FovLines, l)
     end
 end
@@ -350,7 +587,7 @@ RunService.Heartbeat:Connect(function()
 end)
 
 -- ============================================================
--- WORLD (Lighting/Atmosphere/Bloom/CC/FOV)
+-- WORLD
 -- ============================================================
 local Def = {
     Brightness=Lighting.Brightness, ClockTime=Lighting.ClockTime,
@@ -378,20 +615,14 @@ RunService.Heartbeat:Connect(function()
         end
         Lighting.GlobalShadows = not Vars.NoShadows
         if Vars.TimeChanger then Lighting.ClockTime = Vars.TimeValue end
-        if Vars.AmbientOverride then
-            Lighting.Ambient = Vars.AmbientColor
-        else
-            Lighting.Ambient = Def.Ambient
-        end
+        if Vars.AmbientOverride then Lighting.Ambient = Vars.AmbientColor
+        else Lighting.Ambient = Def.Ambient end
         if Vars.AtmEnabled then
             if not (Atm and Atm.Parent) then
                 Atm = Instance.new("Atmosphere"); Atm.Name = "SigmaAtm"; Atm.Parent = Lighting
             end
-            Atm.Density = Vars.AtmDensity
-            Atm.Haze = Vars.AtmHaze
-            Atm.Glare = Vars.AtmGlare
-            Atm.Color = Vars.AtmColor
-            Atm.Decay = Vars.AtmDecay
+            Atm.Density = Vars.AtmDensity; Atm.Haze = Vars.AtmHaze
+            Atm.Glare = Vars.AtmGlare; Atm.Color = Vars.AtmColor; Atm.Decay = Vars.AtmDecay
         elseif Atm then Atm:Destroy(); Atm = nil end
         if Vars.Bloom then
             if not (BloomFx and BloomFx.Parent) then
@@ -403,9 +634,7 @@ RunService.Heartbeat:Connect(function()
             if not (CCFx and CCFx.Parent) then
                 CCFx = Instance.new("ColorCorrectionEffect"); CCFx.Name = "SigmaCC"; CCFx.Parent = Lighting
             end
-            CCFx.Saturation = Vars.Saturation
-            CCFx.Contrast = Vars.Contrast
-            CCFx.TintColor = Vars.CCTint
+            CCFx.Saturation = Vars.Saturation; CCFx.Contrast = Vars.Contrast; CCFx.TintColor = Vars.CCTint
         elseif CCFx then CCFx:Destroy(); CCFx = nil end
         if Vars.FovChanger then Cam.FieldOfView = Vars.FovValue end
     end)
@@ -420,9 +649,7 @@ function ApplyOptimization()
     if Vars.OptNoShadows then
         Lighting.GlobalShadows = false
         for _, p in ipairs(workspace:GetDescendants()) do
-            if p:IsA("BasePart") and p.CastShadow then
-                pcall(function() p.CastShadow = false end)
-            end
+            if p:IsA("BasePart") and p.CastShadow then pcall(function() p.CastShadow = false end) end
         end
     end
     if Vars.OptNoParticles then
@@ -452,9 +679,7 @@ function ApplyOptimization()
     end
     if Vars.OptNoTextures then
         for _, d in ipairs(workspace:GetDescendants()) do
-            if d:IsA("Decal") or d:IsA("Texture") then
-                pcall(function() d.Transparency = 1 end)
-            end
+            if d:IsA("Decal") or d:IsA("Texture") then pcall(function() d.Transparency = 1 end) end
         end
     end
     pcall(function() settings().Rendering.QualityLevel = Vars.OptQuality end)
@@ -631,11 +856,9 @@ end)
 
 Players.PlayerRemoving:Connect(RemoveChams)
 
--- ГОТОВО
 task.spawn(function()
     task.wait(1)
-    pcall(function() Library:Notify("Sigma Universal v2.0 loaded!", 5) end)
+    pcall(function() Library:Notify("Sigma Universal v2.5 loaded!", 5) end)
 end)
-print("=== Sigma Universal v2.0 READY ===")
-print("Toggle Aimbot in menu, hold RMB to aim")
+print("=== Sigma Universal v2.5 READY ===")
 print("Author: @sigmatop1jj")
