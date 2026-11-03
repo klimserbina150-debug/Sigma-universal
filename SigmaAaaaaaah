@@ -1,6 +1,20 @@
--- Sigma Universal v1.6.2
+-- Sigma Universal v2.0 (Fallback Mode)
+-- by @sigmatop1jj
+
+if getgenv().SigmaLoaded then
+    warn("Sigma already loaded!")
+    return
+end
+getgenv().SigmaLoaded = true
+
 local repo = "https://raw.githubusercontent.com/violin-suzutsuki/LinoriaLib/main/"
 local Library = loadstring(game:HttpGet(repo .. "Library.lua"))()
+
+local Window = Library:CreateWindow({
+    Title = "Sigma Universal",
+    Footer = "by @sigmatop1jj | v2.0",
+    Center = true, AutoShow = true, Resizable = true,
+})
 
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
@@ -9,24 +23,64 @@ local Lighting = game:GetService("Lighting")
 local LP = Players.LocalPlayer
 local Cam = workspace.CurrentCamera
 
-local Def = {
-    Brightness = Lighting.Brightness, ClockTime = Lighting.ClockTime,
-    GlobalShadows = Lighting.GlobalShadows, OutdoorAmbient = Lighting.OutdoorAmbient,
-    Ambient = Lighting.Ambient, FogStart = Lighting.FogStart,
-    FogEnd = Lighting.FogEnd, FogColor = Lighting.FogColor,
+local VEC0 = Vector3.new(0, 0, 0)
+
+-- ============================================================
+-- СВОИ ПЕРЕМЕННЫЕ — НЕ ЗАВИСИМ ОТ Options/Toggles
+-- ============================================================
+local Vars = {
+    AimbotEnabled=false, AimbotVisibleCheck=true, AimbotFov=150,
+    AimbotSmoothness=5, AimbotPrediction=0.165, AimbotMultipoint=true,
+    FovCircleEnabled=true, FovCircleFilled=false, FovCircleThickness=2,
+    FovCircleRainbow=false, FovCircleColor=Color3.fromRGB(255,255,255),
+    Fullbright=false, Brightness=2, NoFog=false, NoShadows=false,
+    FovChanger=false, FovValue=70,
+    Bloom=false, BloomIntensity=0.7, ColorCorrection=false,
+    Saturation=0, Contrast=0, CCTint=Color3.fromRGB(255,255,255),
+    ESPBox=false, ESPName=false, ESPDistance=false, ESPHealthBar=false,
+    ESPTeamCheck=true, ESPMaxDistance=1500,
+    ESPBoxColor=Color3.fromRGB(255,255,255), ESPTextColor=Color3.fromRGB(255,255,255),
+    ChamsEnabled=false, ChamsTeamCheck=true, ChamsTransparency=0.5,
+    ChamsMaxDistance=1500, ChamsFill=Color3.fromRGB(255,0,0),
+    ChamsOutline=Color3.fromRGB(255,255,255), ChamsRainbow=false,
+    Bunnyhop=false, Speedhack=false, SpeedValue=24,
+    Fly=false, FlySpeed=50, Spinbot=false, SpinSpeed=15,
+    TimeChanger=false, TimeValue=12, AmbientOverride=false,
+    AmbientColor=Color3.fromRGB(255,255,255),
+    AtmEnabled=false, AtmDensity=0.35, AtmHaze=1, AtmGlare=10,
+    AtmColor=Color3.fromRGB(199,212,255), AtmDecay=Color3.fromRGB(106,112,125),
+    OptNoShadows=true, OptNoParticles=true, OptNoPostFX=true,
+    OptNoWaterWaves=true, OptNoTextures=false, OptQuality=1,
 }
 
--- ===== WINDOW (ДО получения Options!) =====
-local Window = Library:CreateWindow({
-    Title = "Sigma Universal",
-    Footer = "by @sigmatop1jj | v1.6.2",
-    Center = true, AutoShow = true, Resizable = true,
-})
+-- ============================================================
+-- ХЕЛПЕРЫ для AddToggle/AddSlider/AddColor — пишут в Vars
+-- ============================================================
+local function T(box, key, text, default)
+    box:AddToggle(key, {
+        Text=text, Default = default or Vars[key],
+        Callback=function(v) Vars[key] = v end,
+    })
+end
 
--- ===== ТЕПЕРЬ Options доступен =====
-local Options = Library.Options
-local Toggles = Library.Toggles
+local function S(box, key, text, default, min, max, rounding)
+    box:AddSlider(key, {
+        Text=text, Default = default or Vars[key],
+        Min=min, Max=max, Rounding=rounding or 0,
+        Callback=function(v) Vars[key] = v end,
+    })
+end
 
+local function C(box, key, text, default)
+    box:AddLabel(text):AddColorPicker(key, {
+        Default = default or Vars[key],
+        Callback=function(v) Vars[key] = v end,
+    })
+end
+
+-- ============================================================
+-- ВКЛАДКИ
+-- ============================================================
 local Combat = Window:AddTab("Combat")
 local Visuals = Window:AddTab("Visuals")
 local ESPTab = Window:AddTab("ESP")
@@ -34,325 +88,336 @@ local Movement = Window:AddTab("Movement")
 local World = Window:AddTab("World")
 local Settings = Window:AddTab("Settings")
 
--- ===== COMBAT =====
+-- COMBAT
 local CG = Combat:AddLeftGroupbox("Aimbot")
-CG:AddToggle("AimbotEnabled", { Text = "Aimbot", Default = false })
-CG:AddToggle("AimbotVisibleCheck", { Text = "Visible Check", Default = true })
-CG:AddSlider("AimbotFov", { Text = "FOV", Default = 150, Min = 10, Max = 800, Rounding = 0 })
-CG:AddSlider("AimbotSmoothness", { Text = "Smoothness", Default = 5, Min = 1, Max = 20, Rounding = 0 })
-CG:AddSlider("AimbotPrediction", { Text = "Prediction", Default = 0.165, Min = 0, Max = 0.5, Rounding = 3 })
-CG:AddToggle("AimbotMultipoint", { Text = "Head Shot", Default = true })
+T(CG,"AimbotEnabled","Aimbot",false)
+T(CG,"AimbotVisibleCheck","Visible Check",true)
+S(CG,"AimbotFov","FOV",150,10,800,0)
+S(CG,"AimbotSmoothness","Smoothness",5,1,20,0)
+S(CG,"AimbotPrediction","Prediction",0.165,0,0.5,3)
+T(CG,"AimbotMultipoint","Head Shot",true)
 
 local FOVC = Combat:AddRightGroupbox("Aim FOV Circle")
-FOVC:AddToggle("FovCircleEnabled", { Text = "Show Circle", Default = true })
-FOVC:AddToggle("FovCircleFilled", { Text = "Filled", Default = false })
-FOVC:AddSlider("FovCircleThickness", { Text = "Thickness", Default = 2, Min = 1, Max = 10, Rounding = 0 })
-FOVC:AddToggle("FovCircleRainbow", { Text = "Rainbow", Default = false })
-FOVC:AddLabel("Color"):AddColorPicker("FovCircleColor", { Default = Color3.fromRGB(255, 255, 255) })
+T(FOVC,"FovCircleEnabled","Show Circle",true)
+T(FOVC,"FovCircleFilled","Filled",false)
+S(FOVC,"FovCircleThickness","Thickness",2,1,10,0)
+T(FOVC,"FovCircleRainbow","Rainbow",false)
+C(FOVC,"FovCircleColor","Color",Color3.fromRGB(255,255,255))
 
--- ===== VISUALS =====
+-- VISUALS
 local VG = Visuals:AddLeftGroupbox("Fullbright")
-VG:AddToggle("Fullbright", { Text = "Fullbright", Default = false })
-VG:AddSlider("Brightness", { Text = "Brightness", Default = 2, Min = 0, Max = 10, Rounding = 1 })
-VG:AddToggle("NoFog", { Text = "Remove Fog", Default = false })
-VG:AddToggle("NoShadows", { Text = "No Shadows", Default = false })
+T(VG,"Fullbright","Fullbright",false)
+S(VG,"Brightness","Brightness",2,0,10,1)
+T(VG,"NoFog","Remove Fog",false)
+T(VG,"NoShadows","No Shadows",false)
 
 local VG2 = Visuals:AddRightGroupbox("Camera")
-VG2:AddToggle("FovChanger", { Text = "FOV Changer", Default = false })
-VG2:AddSlider("FovValue", { Text = "FOV (50-120)", Default = 70, Min = 50, Max = 120, Rounding = 0 })
+T(VG2,"FovChanger","FOV Changer",false)
+S(VG2,"FovValue","FOV (50-120)",70,50,120,0)
 
 local VG3 = Visuals:AddRightGroupbox("Effects")
-VG3:AddToggle("Bloom", { Text = "Bloom", Default = false })
-VG3:AddSlider("BloomIntensity", { Text = "Bloom Intensity", Default = 0.7, Min = 0, Max = 3, Rounding = 1 })
-VG3:AddToggle("ColorCorrection", { Text = "Color Correction", Default = false })
-VG3:AddSlider("Saturation", { Text = "Saturation", Default = 0, Min = -1, Max = 1, Rounding = 2 })
-VG3:AddSlider("Contrast", { Text = "Contrast", Default = 0, Min = -1, Max = 1, Rounding = 2 })
-VG3:AddLabel("Tint"):AddColorPicker("CCTint", { Default = Color3.fromRGB(255, 255, 255) })
+T(VG3,"Bloom","Bloom",false)
+S(VG3,"BloomIntensity","Bloom Intensity",0.7,0,3,1)
+T(VG3,"ColorCorrection","Color Correction",false)
+S(VG3,"Saturation","Saturation",0,-1,1,2)
+S(VG3,"Contrast","Contrast",0,-1,1,2)
+C(VG3,"CCTint","Tint",Color3.fromRGB(255,255,255))
 
--- ===== ESP =====
+-- ESP
 local EG1 = ESPTab:AddLeftGroupbox("Player ESP")
-EG1:AddToggle("ESPBox", { Text = "Box", Default = false })
-EG1:AddToggle("ESPName", { Text = "Name", Default = false })
-EG1:AddToggle("ESPDistance", { Text = "Distance", Default = false })
-EG1:AddToggle("ESPHealthBar", { Text = "Health Bar", Default = false })
-EG1:AddToggle("ESPTeamCheck", { Text = "Team Check", Default = true })
-EG1:AddSlider("ESPMaxDistance", { Text = "Max Distance (studs)", Default = 1500, Min = 0, Max = 10000, Rounding = 0 })
-EG1:AddLabel("Box Color"):AddColorPicker("ESPBoxColor", { Default = Color3.fromRGB(255, 255, 255) })
-EG1:AddLabel("Text Color"):AddColorPicker("ESPTextColor", { Default = Color3.fromRGB(255, 255, 255) })
+T(EG1,"ESPBox","Box",false)
+T(EG1,"ESPName","Name",false)
+T(EG1,"ESPDistance","Distance",false)
+T(EG1,"ESPHealthBar","Health Bar",false)
+T(EG1,"ESPTeamCheck","Team Check",true)
+S(EG1,"ESPMaxDistance","Max Distance (studs)",1500,0,10000,0)
+C(EG1,"ESPBoxColor","Box Color",Color3.fromRGB(255,255,255))
+C(EG1,"ESPTextColor","Text Color",Color3.fromRGB(255,255,255))
 EG1:AddDivider()
 EG1:AddButton("Fix ESP", function()
     for p, data in pairs(ESP_Data or {}) do
         for _, d in pairs(data) do pcall(function() d:Remove() end) end
     end
     ESP_Data = {}
-    for _, p in ipairs(Players:GetPlayers()) do MakeESP(p) end
-    Library:Notify("ESP recreated", 3)
+    for _, p in ipairs(Players:GetPlayers()) do pcall(MakeESP, p) end
+    pcall(function() Library:Notify("ESP recreated", 3) end)
 end)
 
 local EG2 = ESPTab:AddRightGroupbox("Chams")
-EG2:AddToggle("ChamsEnabled", { Text = "Enable Chams", Default = false })
-EG2:AddToggle("ChamsTeamCheck", { Text = "Team Check", Default = true })
-EG2:AddSlider("ChamsTransparency", { Text = "Fill Transparency", Default = 0.5, Min = 0, Max = 1, Rounding = 2 })
-EG2:AddSlider("ChamsMaxDistance", { Text = "Max Distance", Default = 1500, Min = 0, Max = 10000, Rounding = 0 })
-EG2:AddLabel("Fill Color"):AddColorPicker("ChamsFill", { Default = Color3.fromRGB(255, 0, 0) })
-EG2:AddLabel("Outline Color"):AddColorPicker("ChamsOutline", { Default = Color3.fromRGB(255, 255, 255) })
-EG2:AddToggle("ChamsRainbow", { Text = "Rainbow Fill", Default = false })
+T(EG2,"ChamsEnabled","Enable Chams",false)
+T(EG2,"ChamsTeamCheck","Team Check",true)
+S(EG2,"ChamsTransparency","Fill Transparency",0.5,0,1,2)
+S(EG2,"ChamsMaxDistance","Max Distance",1500,0,10000,0)
+C(EG2,"ChamsFill","Fill Color",Color3.fromRGB(255,0,0))
+C(EG2,"ChamsOutline","Outline Color",Color3.fromRGB(255,255,255))
+T(EG2,"ChamsRainbow","Rainbow Fill",false)
 
--- ===== MOVEMENT =====
+-- MOVEMENT
 local MG = Movement:AddLeftGroupbox("Movement")
-MG:AddToggle("Bunnyhop", { Text = "Bunnyhop", Default = false })
-MG:AddToggle("Speedhack", { Text = "Speedhack", Default = false })
-MG:AddSlider("SpeedValue", { Text = "Speed", Default = 24, Min = 16, Max = 200, Rounding = 0 })
-MG:AddToggle("Fly", { Text = "Fly", Default = false })
-MG:AddSlider("FlySpeed", { Text = "Fly Speed", Default = 50, Min = 10, Max = 300, Rounding = 0 })
+T(MG,"Bunnyhop","Bunnyhop",false)
+T(MG,"Speedhack","Speedhack",false)
+S(MG,"SpeedValue","Speed",24,16,200,0)
+T(MG,"Fly","Fly",false)
+S(MG,"FlySpeed","Fly Speed",50,10,300,0)
 
 local MG2 = Movement:AddRightGroupbox("Spinbot")
-MG2:AddToggle("Spinbot", { Text = "Spinbot", Default = false })
-MG2:AddSlider("SpinSpeed", { Text = "Spin Speed", Default = 15, Min = 1, Max = 90, Rounding = 0 })
+T(MG2,"Spinbot","Spinbot",false)
+S(MG2,"SpinSpeed","Spin Speed",15,1,90,0)
 
--- ===== WORLD =====
+-- WORLD
 local WG1 = World:AddLeftGroupbox("Time & Lighting")
-WG1:AddToggle("TimeChanger", { Text = "Time Changer", Default = false })
-WG1:AddSlider("TimeValue", { Text = "Time (0-24)", Default = 12, Min = 0, Max = 24, Rounding = 1 })
-WG1:AddToggle("AmbientOverride", { Text = "Ambient Color", Default = false })
-WG1:AddLabel("Ambient"):AddColorPicker("AmbientColor", { Default = Color3.fromRGB(255, 255, 255) })
+T(WG1,"TimeChanger","Time Changer",false)
+S(WG1,"TimeValue","Time (0-24)",12,0,24,1)
+T(WG1,"AmbientOverride","Ambient Color",false)
+C(WG1,"AmbientColor","Ambient",Color3.fromRGB(255,255,255))
 
 local WG2 = World:AddLeftGroupbox("Atmosphere")
-WG2:AddToggle("AtmEnabled", { Text = "Atmosphere", Default = false })
-WG2:AddSlider("AtmDensity", { Text = "Density", Default = 0.35, Min = 0, Max = 1, Rounding = 2 })
-WG2:AddSlider("AtmHaze", { Text = "Haze", Default = 1, Min = 0, Max = 10, Rounding = 1 })
-WG2:AddSlider("AtmGlare", { Text = "Glare", Default = 10, Min = 0, Max = 10, Rounding = 1 })
-WG2:AddLabel("Color"):AddColorPicker("AtmColor", { Default = Color3.fromRGB(199, 212, 255) })
-WG2:AddLabel("Decay"):AddColorPicker("AtmDecay", { Default = Color3.fromRGB(106, 112, 125) })
+T(WG2,"AtmEnabled","Atmosphere",false)
+S(WG2,"AtmDensity","Density",0.35,0,1,2)
+S(WG2,"AtmHaze","Haze",1,0,10,1)
+S(WG2,"AtmGlare","Glare",10,0,10,1)
+C(WG2,"AtmColor","Color",Color3.fromRGB(199,212,255))
+C(WG2,"AtmDecay","Decay",Color3.fromRGB(106,112,125))
 
 local OG = World:AddRightGroupbox("Optimization")
-OG:AddToggle("OptNoShadows", { Text = "Remove Shadows", Default = true })
-OG:AddToggle("OptNoParticles", { Text = "Remove Particles", Default = true })
-OG:AddToggle("OptNoPostFX", { Text = "Remove Post Effects", Default = true })
-OG:AddToggle("OptNoWaterWaves", { Text = "Simplify Water", Default = true })
-OG:AddToggle("OptNoTextures", { Text = "Remove Decals/Textures", Default = false })
-OG:AddSlider("OptQuality", { Text = "Render Quality (1-10)", Default = 1, Min = 1, Max = 10, Rounding = 0 })
+T(OG,"OptNoShadows","Remove Shadows",true)
+T(OG,"OptNoParticles","Remove Particles",true)
+T(OG,"OptNoPostFX","Remove Post Effects",true)
+T(OG,"OptNoWaterWaves","Simplify Water",true)
+T(OG,"OptNoTextures","Remove Textures",false)
+S(OG,"OptQuality","Render Quality (1-10)",1,1,10,0)
 OG:AddDivider()
-OG:AddButton("Apply Optimization", function() ApplyOptimization() end)
-OG:AddButton("Restore Graphics", function() RestoreGraphics() end)
+OG:AddButton("Apply Optimization", function() pcall(ApplyOptimization) end)
+OG:AddButton("Restore Graphics", function() pcall(RestoreGraphics) end)
 
-local WG3 = World:AddRightGroupbox("Skybox")
-local Skyboxes = {
-    ["HD"] = { "http://www.roblox.com/asset/?id=16553658937", "http://www.roblox.com/asset/?id=16553660713", "http://www.roblox.com/asset/?id=16553662144", "http://www.roblox.com/asset/?id=16553664042", "http://www.roblox.com/asset/?id=16553665766", "http://www.roblox.com/asset/?id=16553667750" },
-    ["Galaxy"] = { "rbxassetid://15983968922", "rbxassetid://15983966825", "rbxassetid://15983965025", "rbxassetid://15983967420", "rbxassetid://15983966246", "rbxassetid://15983964246" },
-    ["Sunset"] = { "rbxassetid://600830446", "rbxassetid://600831635", "rbxassetid://600832720", "rbxassetid://600886090", "rbxassetid://600833862", "rbxassetid://600835177" },
-    ["Pink"] = { "rbxassetid://12216109205", "rbxassetid://12216109875", "rbxassetid://12216109489", "rbxassetid://12216110170", "rbxassetid://12216110471", "rbxassetid://12216108877" },
-    ["Space"] = { "http://www.roblox.com/asset/?id=166509999", "http://www.roblox.com/asset/?id=166510057", "http://www.roblox.com/asset/?id=166510116", "http://www.roblox.com/asset/?id=166510092", "http://www.roblox.com/asset/?id=166510131", "http://www.roblox.com/asset/?id=166510114" },
-    ["Snow"] = { "http://www.roblox.com/asset/?id=155657655", "http://www.roblox.com/asset/?id=155674246", "http://www.roblox.com/asset/?id=155657609", "http://www.roblox.com/asset/?id=155657671", "http://www.roblox.com/asset/?id=155657619", "http://www.roblox.com/asset/?id=155674931" },
-    ["Night"] = { "http://www.roblox.com/asset/?id=12064107", "http://www.roblox.com/asset/?id=12064152", "http://www.roblox.com/asset/?id=12064121", "http://www.roblox.com/asset/?id=12063984", "http://www.roblox.com/asset/?id=12064115", "http://www.roblox.com/asset/?id=12064131" },
-}
-
-WG3:AddDropdown("Skybox", {
-    Values = (function() local t = {} for k in pairs(Skyboxes) do table.insert(t, k) end table.sort(t) return t end)(),
-    Default = "HD", Text = "Skybox"
-})
-WG3:AddToggle("SkyboxEnabled", { Text = "Enable Skybox", Default = false })
-
--- ===== SETTINGS =====
+-- SETTINGS
 local SG = Settings:AddLeftGroupbox("Menu")
-SG:AddLabel("Menu Keybind"):AddKeyPicker("MenuKeybind", { Default = "RightShift", NoUI = true, Text = "Menu Keybind" })
-SG:AddButton("Unload", function() Library:Unload() end)
-
-pcall(function()
-    Library.ToggleKeybind = Options.MenuKeybind
-end)
+SG:AddLabel("Menu Keybind (RightShift)")
+SG:AddButton("Unload", function() pcall(function() Library:Unload() end) end)
 
 local CreditGroup = Settings:AddRightGroupbox("Credits")
-CreditGroup:AddLabel("Script: Sigma Universal")
+CreditGroup:AddLabel("Script: Sigma Universal v2.0")
 CreditGroup:AddLabel("Author: @sigmatop1jj")
 CreditGroup:AddDivider()
 CreditGroup:AddButton("Copy Telegram", function()
-    if setclipboard then
-        setclipboard("@sigmatop1jj")
-        Library:Notify("Copied: @sigmatop1jj", 3)
-    end
+    pcall(function()
+        if setclipboard then
+            setclipboard("@sigmatop1jj")
+            Library:Notify("Copied: @sigmatop1jj", 3)
+        end
+    end)
 end)
 
--- ===== VISIBLE CHECK =====
+-- ============================================================
+-- VISIBLE CHECK
+-- ============================================================
+local excludeEnum = Enum.RaycastFilterType.Exclude or Enum.RaycastFilterType.Blacklist
+
 local function IsVisible(targetChar)
-    if not targetChar then return false end
-    local myChar = LP.Character
-    if not myChar then return false end
-    local myRoot = myChar:FindFirstChild("HumanoidRootPart")
-    local targetRoot = targetChar:FindFirstChild("HumanoidRootPart")
-    local targetHead = targetChar:FindFirstChild("Head") or targetRoot
-    if not myRoot or not targetRoot or not targetHead then return false end
-    local origin = Cam.CFrame.Position
-    local targetPos = Toggles.AimbotMultipoint.Value and targetHead.Position or targetRoot.Position
-    local params = RaycastParams.new()
-    params.FilterType = Enum.RaycastFilterType.Exclude
-    params.FilterDescendantsInstances = {myChar, targetChar, Cam}
-    local result = workspace:Raycast(origin, (targetPos - origin), params)
-    return result == nil
+    local ok, result = pcall(function()
+        if not targetChar then return false end
+        local myChar = LP.Character
+        if not myChar then return false end
+        local myRoot = myChar:FindFirstChild("HumanoidRootPart")
+        local targetRoot = targetChar:FindFirstChild("HumanoidRootPart")
+        local targetHead = targetChar:FindFirstChild("Head") or targetRoot
+        if not myRoot or not targetRoot or not targetHead then return false end
+        local origin = Cam.CFrame.Position
+        local targetPos = Vars.AimbotMultipoint and targetHead.Position or targetRoot.Position
+        local params = RaycastParams.new()
+        params.FilterType = excludeEnum
+        params.FilterDescendantsInstances = {myChar, targetChar, Cam}
+        local res = workspace:Raycast(origin, (targetPos - origin), params)
+        return res == nil
+    end)
+    return ok and result or false
 end
 
--- ===== AIMBOT =====
+-- ============================================================
+-- AIMBOT (использует Vars.*)
+-- ============================================================
 local function GetClosestPlayer()
-    local target, shortest = nil, Options.AimbotFov.Value
-    for _, p in ipairs(Players:GetPlayers()) do
-        if p ~= LP and p.Character and p.Character:FindFirstChild("HumanoidRootPart") then
-            if Toggles.ESPTeamCheck.Value and p.Team == LP.Team then continue end
-            local hum = p.Character:FindFirstChildOfClass("Humanoid")
-            if hum and hum.Health > 0 then
-                if Toggles.AimbotVisibleCheck.Value and not IsVisible(p.Character) then continue end
-                local pos, onScreen = Cam:WorldToViewportPoint(p.Character.HumanoidRootPart.Position)
-                if onScreen then
-                    local d = (Vector2.new(pos.X, pos.Y) - UIS:GetMouseLocation()).Magnitude
-                    if d < shortest then shortest = d; target = p.Character end
+    local ok, result = pcall(function()
+        local target, shortest = nil, Vars.AimbotFov
+        for _, p in ipairs(Players:GetPlayers()) do
+            if p ~= LP and p.Character and p.Character:FindFirstChild("HumanoidRootPart") then
+                if Vars.ESPTeamCheck and p.Team == LP.Team then continue end
+                local hum = p.Character:FindFirstChildOfClass("Humanoid")
+                if hum and hum.Health > 0 then
+                    if Vars.AimbotVisibleCheck and not IsVisible(p.Character) then continue end
+                    local pos, onScreen = Cam:WorldToViewportPoint(p.Character.HumanoidRootPart.Position)
+                    if onScreen then
+                        local d = (Vector2.new(pos.X, pos.Y) - UIS:GetMouseLocation()).Magnitude
+                        if d < shortest then shortest = d; target = p.Character end
+                    end
                 end
             end
         end
-    end
-    return target
+        return target
+    end)
+    return ok and result or nil
 end
 
 RunService.RenderStepped:Connect(function()
-    if not Toggles.AimbotEnabled.Value or not UIS:IsMouseButtonPressed(Enum.UserInputType.MouseButton2) then return end
-    local t = GetClosestPlayer()
-    if t and t:FindFirstChild("HumanoidRootPart") then
-        local root = t.HumanoidRootPart
-        local head = t:FindFirstChild("Head") or root
-        local targetPos = Toggles.AimbotMultipoint.Value and head.Position or root.Position
-        local pred = targetPos + root.Velocity * Options.AimbotPrediction.Value
-        Cam.CFrame = Cam.CFrame:Lerp(CFrame.new(Cam.CFrame.Position, pred), 1 / Options.AimbotSmoothness.Value)
-    end
-end)
-
--- ===== FOV CIRCLE =====
-local FovCircle = Drawing.new("Circle")
-FovCircle.Visible = false
-FovCircle.Transparency = 1
-FovCircle.NumSides = 60
-
-RunService.RenderStepped:Connect(function()
-    if not Toggles.FovCircleEnabled.Value then
-        FovCircle.Visible = false
-        return
-    end
-    FovCircle.Visible = true
-    FovCircle.Position = Vector2.new(Cam.ViewportSize.X / 2, Cam.ViewportSize.Y / 2)
-    FovCircle.Radius = Options.AimbotFov.Value
-    FovCircle.Thickness = Options.FovCircleThickness.Value
-    FovCircle.Filled = Toggles.FovCircleFilled.Value
-    if Toggles.FovCircleRainbow.Value then
-        FovCircle.Color = Color3.fromHSV((tick() * 0.5) % 1, 1, 1)
-    else
-        FovCircle.Color = Options.FovCircleColor.Value
-    end
-end)
-
--- ===== MOVEMENT =====
-RunService.Heartbeat:Connect(function()
-    local char = LP.Character
-    if not char or not char:FindFirstChild("HumanoidRootPart") then return end
-    local hum = char:FindFirstChildOfClass("Humanoid")
-    local root = char.HumanoidRootPart
-    if Toggles.Bunnyhop.Value and hum and hum.FloorMaterial ~= Enum.Material.Air then
-        hum:ChangeState(Enum.HumanoidStateType.Jumping)
-    end
-    if Toggles.Speedhack.Value and hum and hum.MoveDirection.Magnitude > 0 then
-        root.Velocity = Vector3.new(hum.MoveDirection.X * Options.SpeedValue.Value, root.Velocity.Y, hum.MoveDirection.Z * Options.SpeedValue.Value)
-    end
-    if Toggles.Fly.Value then
-        local dir = Vector3.zero
-        if UIS:IsKeyDown(Enum.KeyCode.W) then dir += Cam.CFrame.LookVector end
-        if UIS:IsKeyDown(Enum.KeyCode.S) then dir -= Cam.CFrame.LookVector end
-        if UIS:IsKeyDown(Enum.KeyCode.A) then dir -= Cam.CFrame.RightVector end
-        if UIS:IsKeyDown(Enum.KeyCode.D) then dir += Cam.CFrame.RightVector end
-        root.Velocity = dir * Options.FlySpeed.Value + Vector3.new(0, 0.5, 0)
-    end
-    if Toggles.Spinbot.Value then
-        root.CFrame = root.CFrame * CFrame.Angles(0, math.rad(Options.SpinSpeed.Value), 0)
-    end
-end)
-
--- ===== WORLD =====
-local Atm, BloomFx, CCFx, Sky = nil, nil, nil, nil
-
-RunService.Heartbeat:Connect(function()
-    if Toggles.Fullbright.Value then
-        Lighting.Brightness = Options.Brightness.Value
-        Lighting.OutdoorAmbient = Color3.new(1, 1, 1)
-        Lighting.ExposureCompensation = 0.5
-    else
-        Lighting.Brightness = Def.Brightness
-        Lighting.OutdoorAmbient = Def.OutdoorAmbient
-        Lighting.ExposureCompensation = 0
-    end
-    if Toggles.NoFog.Value then
-        Lighting.FogStart = 0; Lighting.FogEnd = 1e6
-    else
-        Lighting.FogStart = Def.FogStart; Lighting.FogEnd = Def.FogEnd
-    end
-    Lighting.GlobalShadows = not Toggles.NoShadows.Value
-    if Toggles.TimeChanger.Value then Lighting.ClockTime = Options.TimeValue.Value end
-    if Toggles.AmbientOverride.Value then
-        Lighting.Ambient = Options.AmbientColor.Value
-    else
-        Lighting.Ambient = Def.Ambient
-    end
-    if Toggles.AtmEnabled.Value then
-        if not (Atm and Atm.Parent) then
-            Atm = Instance.new("Atmosphere"); Atm.Name = "SigmaAtm"; Atm.Parent = Lighting
+    pcall(function()
+        if not Vars.AimbotEnabled then return end
+        if not UIS:IsMouseButtonPressed(Enum.UserInputType.MouseButton2) then return end
+        local t = GetClosestPlayer()
+        if t and t:FindFirstChild("HumanoidRootPart") then
+            local root = t.HumanoidRootPart
+            local head = t:FindFirstChild("Head") or root
+            local targetPos = Vars.AimbotMultipoint and head.Position or root.Position
+            local pred = targetPos + root.Velocity * Vars.AimbotPrediction
+            Cam.CFrame = Cam.CFrame:Lerp(CFrame.new(Cam.CFrame.Position, pred), 1 / Vars.AimbotSmoothness)
         end
-        Atm.Density = Options.AtmDensity.Value
-        Atm.Haze = Options.AtmHaze.Value
-        Atm.Glare = Options.AtmGlare.Value
-        Atm.Color = Options.AtmColor.Value
-        Atm.Decay = Options.AtmDecay.Value
-    elseif Atm then Atm:Destroy(); Atm = nil end
-    if Toggles.Bloom.Value then
-        if not (BloomFx and BloomFx.Parent) then
-            BloomFx = Instance.new("BloomEffect"); BloomFx.Name = "SigmaBloom"; BloomFx.Parent = Lighting
-        end
-        BloomFx.Intensity = Options.BloomIntensity.Value
-    elseif BloomFx then BloomFx:Destroy(); BloomFx = nil end
-    if Toggles.ColorCorrection.Value then
-        if not (CCFx and CCFx.Parent) then
-            CCFx = Instance.new("ColorCorrectionEffect"); CCFx.Name = "SigmaCC"; CCFx.Parent = Lighting
-        end
-        CCFx.Saturation = Options.Saturation.Value
-        CCFx.Contrast = Options.Contrast.Value
-        CCFx.TintColor = Options.CCTint.Value
-    elseif CCFx then CCFx:Destroy(); CCFx = nil end
-    if Toggles.FovChanger.Value then
-        Cam.FieldOfView = Options.FovValue.Value
-    else
-        Cam.FieldOfView = 70
-    end
+    end)
 end)
 
-local function ApplySkybox(name)
-    local data = Skyboxes[name]
-    if not data then return end
-    if not Sky then
-        Sky = Instance.new("Sky"); Sky.Name = "SigmaSky"; Sky.Parent = Lighting
+-- ============================================================
+-- FOV CIRCLE (Circle + fallback на 60 линий)
+-- ============================================================
+local FovCircle, FovLines = nil, nil
+pcall(function()
+    FovCircle = Drawing.new("Circle")
+    FovCircle.Visible = false; FovCircle.Transparency = 1; FovCircle.NumSides = 60
+end)
+if not FovCircle then
+    FovLines = {}
+    for i = 1, 60 do
+        local l = Drawing.new("Line")
+        l.Visible = false; l.Thickness = 2
+        table.insert(FovLines, l)
     end
-    Sky.SkyboxBk, Sky.SkyboxDn, Sky.SkyboxFt = data[1], data[2], data[3]
-    Sky.SkyboxLf, Sky.SkyboxRt, Sky.SkyboxUp = data[4], data[5], data[6]
 end
 
-Options.Skybox:OnChanged(function()
-    if Toggles.SkyboxEnabled.Value then ApplySkybox(Options.Skybox.Value) end
-end)
-Toggles.SkyboxEnabled:OnChanged(function()
-    if Toggles.SkyboxEnabled.Value then
-        ApplySkybox(Options.Skybox.Value)
-    elseif Sky then Sky:Destroy(); Sky = nil end
+RunService.RenderStepped:Connect(function()
+    pcall(function()
+        local color = Vars.FovCircleColor
+        if Vars.FovCircleRainbow then color = Color3.fromHSV((tick()*0.5)%1,1,1) end
+        local radius = Vars.AimbotFov
+        local center = Vector2.new(Cam.ViewportSize.X/2, Cam.ViewportSize.Y/2)
+        if FovCircle then
+            if not Vars.FovCircleEnabled then FovCircle.Visible = false; return end
+            FovCircle.Visible = true
+            FovCircle.Position = center
+            FovCircle.Radius = radius
+            FovCircle.Thickness = Vars.FovCircleThickness
+            FovCircle.Filled = Vars.FovCircleFilled
+            FovCircle.Color = color
+        elseif FovLines then
+            if not Vars.FovCircleEnabled then
+                for _, l in ipairs(FovLines) do l.Visible = false end
+                return
+            end
+            for i, l in ipairs(FovLines) do
+                local a1 = (i / #FovLines) * math.pi * 2
+                local a2 = ((i+1) / #FovLines) * math.pi * 2
+                l.From = center + Vector2.new(math.cos(a1), math.sin(a1)) * radius
+                l.To = center + Vector2.new(math.cos(a2), math.sin(a2)) * radius
+                l.Color = color; l.Thickness = Vars.FovCircleThickness; l.Visible = true
+            end
+        end
+    end)
 end)
 
--- ===== OPTIMIZATION =====
-local RemovedParticles = {}
-local RemovedPostFX = {}
-local OriginalWater = {}
+-- ============================================================
+-- MOVEMENT
+-- ============================================================
+RunService.Heartbeat:Connect(function()
+    pcall(function()
+        local char = LP.Character
+        if not char or not char:FindFirstChild("HumanoidRootPart") then return end
+        local hum = char:FindFirstChildOfClass("Humanoid")
+        local root = char.HumanoidRootPart
+        if Vars.Bunnyhop and hum and hum.FloorMaterial ~= Enum.Material.Air then
+            hum:ChangeState(Enum.HumanoidStateType.Jumping)
+        end
+        if Vars.Speedhack and hum and hum.MoveDirection.Magnitude > 0 then
+            root.Velocity = Vector3.new(hum.MoveDirection.X * Vars.SpeedValue, root.Velocity.Y, hum.MoveDirection.Z * Vars.SpeedValue)
+        end
+        if Vars.Fly then
+            local dir = VEC0
+            if UIS:IsKeyDown(Enum.KeyCode.W) then dir = dir + Cam.CFrame.LookVector end
+            if UIS:IsKeyDown(Enum.KeyCode.S) then dir = dir - Cam.CFrame.LookVector end
+            if UIS:IsKeyDown(Enum.KeyCode.A) then dir = dir - Cam.CFrame.RightVector end
+            if UIS:IsKeyDown(Enum.KeyCode.D) then dir = dir + Cam.CFrame.RightVector end
+            root.Velocity = dir * Vars.FlySpeed + Vector3.new(0, 0.5, 0)
+        end
+        if Vars.Spinbot then
+            root.CFrame = root.CFrame * CFrame.Angles(0, math.rad(Vars.SpinSpeed), 0)
+        end
+    end)
+end)
+
+-- ============================================================
+-- WORLD (Lighting/Atmosphere/Bloom/CC/FOV)
+-- ============================================================
+local Def = {
+    Brightness=Lighting.Brightness, ClockTime=Lighting.ClockTime,
+    GlobalShadows=Lighting.GlobalShadows, OutdoorAmbient=Lighting.OutdoorAmbient,
+    Ambient=Lighting.Ambient, FogStart=Lighting.FogStart,
+    FogEnd=Lighting.FogEnd, FogColor=Lighting.FogColor,
+}
+local Atm, BloomFx, CCFx = nil, nil, nil
+
+RunService.Heartbeat:Connect(function()
+    pcall(function()
+        if Vars.Fullbright then
+            Lighting.Brightness = Vars.Brightness
+            Lighting.OutdoorAmbient = Color3.new(1,1,1)
+            Lighting.ExposureCompensation = 0.5
+        else
+            Lighting.Brightness = Def.Brightness
+            Lighting.OutdoorAmbient = Def.OutdoorAmbient
+            Lighting.ExposureCompensation = 0
+        end
+        if Vars.NoFog then
+            Lighting.FogStart = 0; Lighting.FogEnd = 1e6
+        else
+            Lighting.FogStart = Def.FogStart; Lighting.FogEnd = Def.FogEnd
+        end
+        Lighting.GlobalShadows = not Vars.NoShadows
+        if Vars.TimeChanger then Lighting.ClockTime = Vars.TimeValue end
+        if Vars.AmbientOverride then
+            Lighting.Ambient = Vars.AmbientColor
+        else
+            Lighting.Ambient = Def.Ambient
+        end
+        if Vars.AtmEnabled then
+            if not (Atm and Atm.Parent) then
+                Atm = Instance.new("Atmosphere"); Atm.Name = "SigmaAtm"; Atm.Parent = Lighting
+            end
+            Atm.Density = Vars.AtmDensity
+            Atm.Haze = Vars.AtmHaze
+            Atm.Glare = Vars.AtmGlare
+            Atm.Color = Vars.AtmColor
+            Atm.Decay = Vars.AtmDecay
+        elseif Atm then Atm:Destroy(); Atm = nil end
+        if Vars.Bloom then
+            if not (BloomFx and BloomFx.Parent) then
+                BloomFx = Instance.new("BloomEffect"); BloomFx.Name = "SigmaBloom"; BloomFx.Parent = Lighting
+            end
+            BloomFx.Intensity = Vars.BloomIntensity
+        elseif BloomFx then BloomFx:Destroy(); BloomFx = nil end
+        if Vars.ColorCorrection then
+            if not (CCFx and CCFx.Parent) then
+                CCFx = Instance.new("ColorCorrectionEffect"); CCFx.Name = "SigmaCC"; CCFx.Parent = Lighting
+            end
+            CCFx.Saturation = Vars.Saturation
+            CCFx.Contrast = Vars.Contrast
+            CCFx.TintColor = Vars.CCTint
+        elseif CCFx then CCFx:Destroy(); CCFx = nil end
+        if Vars.FovChanger then Cam.FieldOfView = Vars.FovValue end
+    end)
+end)
+
+-- ============================================================
+-- OPTIMIZATION
+-- ============================================================
+local RemovedParticles, RemovedPostFX, OriginalWater = {}, {}, {}
 
 function ApplyOptimization()
-    if Toggles.OptNoShadows.Value then
+    if Vars.OptNoShadows then
         Lighting.GlobalShadows = false
         for _, p in ipairs(workspace:GetDescendants()) do
             if p:IsA("BasePart") and p.CastShadow then
@@ -360,7 +425,7 @@ function ApplyOptimization()
             end
         end
     end
-    if Toggles.OptNoParticles.Value then
+    if Vars.OptNoParticles then
         for _, p in ipairs(workspace:GetDescendants()) do
             if p:IsA("ParticleEmitter") or p:IsA("Smoke") or p:IsA("Fire")
                or p:IsA("Sparkles") or p:IsA("Beam") or p:IsA("Trail") then
@@ -368,32 +433,32 @@ function ApplyOptimization()
             end
         end
     end
-    if Toggles.OptNoPostFX.Value then
+    if Vars.OptNoPostFX then
         for _, fx in ipairs(Lighting:GetChildren()) do
             if fx:IsA("PostEffect") or fx:IsA("Atmosphere") then
                 if fx.Enabled ~= nil then fx.Enabled = false; table.insert(RemovedPostFX, fx) end
             end
         end
     end
-    if Toggles.OptNoWaterWaves.Value then
+    if Vars.OptNoWaterWaves then
         local terrain = workspace:FindFirstChildOfClass("Terrain")
         if terrain then
             pcall(function()
-                OriginalWater = {WaterWaveSize = terrain.WaterWaveSize, WaterWaveSpeed = terrain.WaterWaveSpeed, WaterReflectance = terrain.WaterReflectance, WaterTransparency = terrain.WaterTransparency}
+                OriginalWater = {WaterWaveSize=terrain.WaterWaveSize, WaterWaveSpeed=terrain.WaterWaveSpeed, WaterReflectance=terrain.WaterReflectance, WaterTransparency=terrain.WaterTransparency}
                 terrain.WaterWaveSize = 0; terrain.WaterWaveSpeed = 0
                 terrain.WaterReflectance = 0; terrain.WaterTransparency = 1
             end)
         end
     end
-    if Toggles.OptNoTextures.Value then
+    if Vars.OptNoTextures then
         for _, d in ipairs(workspace:GetDescendants()) do
             if d:IsA("Decal") or d:IsA("Texture") then
                 pcall(function() d.Transparency = 1 end)
             end
         end
     end
-    pcall(function() settings().Rendering.QualityLevel = Options.OptQuality.Value end)
-    Library:Notify("Optimization applied", 3)
+    pcall(function() settings().Rendering.QualityLevel = Vars.OptQuality end)
+    pcall(function() Library:Notify("Optimization applied", 3) end)
 end
 
 function RestoreGraphics()
@@ -415,23 +480,30 @@ function RestoreGraphics()
         if d:IsA("Decal") or d:IsA("Texture") then pcall(function() d.Transparency = 0 end) end
     end
     pcall(function() settings().Rendering.QualityLevel = 10 end)
-    Library:Notify("Graphics restored", 3)
+    pcall(function() Library:Notify("Graphics restored", 3) end)
 end
 
--- ===== ESP =====
+-- ============================================================
+-- ESP
+-- ============================================================
 ESP_Data = ESP_Data or {}
 
 function MakeESP(p)
     if p == LP then return end
     if ESP_Data[p] then for _, d in pairs(ESP_Data[p]) do pcall(function() d:Remove() end) end end
-    local data = {
-        box = Drawing.new("Square"), name = Drawing.new("Text"),
-        dist = Drawing.new("Text"), health = Drawing.new("Square"),
-    }
-    data.box.Visible = false; data.box.Thickness = 1; data.box.Filled = false
-    data.name.Visible = false; data.name.Size = 14; data.name.Center = true; data.name.Outline = true
-    data.dist.Visible = false; data.dist.Size = 13; data.dist.Center = true; data.dist.Outline = true
-    data.health.Visible = false; data.health.Thickness = 1; data.health.Filled = true
+    local ok, data = pcall(function()
+        return {
+            box=Drawing.new("Square"), name=Drawing.new("Text"),
+            dist=Drawing.new("Text"), health=Drawing.new("Square"),
+        }
+    end)
+    if not ok or not data then return end
+    pcall(function()
+        data.box.Visible=false; data.box.Thickness=1; data.box.Filled=false
+        data.name.Visible=false; data.name.Size=14; data.name.Center=true; data.name.Outline=true
+        data.dist.Visible=false; data.dist.Size=13; data.dist.Center=true; data.dist.Outline=true
+        data.health.Visible=false; data.health.Thickness=1; data.health.Filled=true
+    end)
     ESP_Data[p] = data
 end
 
@@ -439,81 +511,88 @@ local function RemoveESP(p)
     if ESP_Data[p] then for _, d in pairs(ESP_Data[p]) do pcall(function() d:Remove() end) end; ESP_Data[p] = nil end
 end
 
-for _, p in ipairs(Players:GetPlayers()) do MakeESP(p) end
-Players.PlayerAdded:Connect(MakeESP)
+for _, p in ipairs(Players:GetPlayers()) do pcall(MakeESP, p) end
+Players.PlayerAdded:Connect(function(p) pcall(MakeESP, p) end)
 Players.PlayerRemoving:Connect(RemoveESP)
 
 RunService.RenderStepped:Connect(function()
-    local myRoot = LP.Character and LP.Character:FindFirstChild("HumanoidRootPart")
-    local maxDist = Options.ESPMaxDistance and Options.ESPMaxDistance.Value or 1500
-    for p, data in pairs(ESP_Data) do
-        local shouldHide = not p.Character or not p.Character:FindFirstChild("HumanoidRootPart") or not myRoot
-        if not shouldHide and Toggles.ESPTeamCheck.Value and p.Team == LP.Team then shouldHide = true end
-        if shouldHide then
-            data.box.Visible = false; data.name.Visible = false
-            data.dist.Visible = false; data.health.Visible = false
-            continue
+    pcall(function()
+        local myRoot = LP.Character and LP.Character:FindFirstChild("HumanoidRootPart")
+        local maxDist = Vars.ESPMaxDistance
+        for p, data in pairs(ESP_Data) do
+            local hide = not p.Character or not p.Character:FindFirstChild("HumanoidRootPart") or not myRoot
+            if not hide and Vars.ESPTeamCheck and p.Team == LP.Team then hide = true end
+            if hide then
+                data.box.Visible=false; data.name.Visible=false
+                data.dist.Visible=false; data.health.Visible=false
+            else
+                local root = p.Character.HumanoidRootPart
+                local hum = p.Character:FindFirstChildOfClass("Humanoid")
+                local head = p.Character:FindFirstChild("Head") or root
+                local distStuds = (myRoot.Position - root.Position).Magnitude
+                if distStuds > maxDist then
+                    data.box.Visible=false; data.name.Visible=false
+                    data.dist.Visible=false; data.health.Visible=false
+                else
+                    local pos, onScreen = Cam:WorldToViewportPoint(root.Position)
+                    local headPos = Cam:WorldToViewportPoint(head.Position + Vector3.new(0,0.5,0))
+                    if not onScreen then
+                        data.box.Visible=false; data.name.Visible=false
+                        data.dist.Visible=false; data.health.Visible=false
+                    else
+                        local height = math.abs(pos.Y - headPos.Y) * 2.2
+                        local width = height * 0.6
+                        local boxPos = Vector2.new(pos.X - width/2, pos.Y - height/2)
+                        data.box.Visible = Vars.ESPBox
+                        data.box.Color = Vars.ESPBoxColor
+                        data.box.Size = Vector2.new(width, height)
+                        data.box.Position = boxPos
+                        data.name.Visible = Vars.ESPName
+                        data.name.Color = Vars.ESPTextColor
+                        data.name.Text = p.Name
+                        data.name.Position = Vector2.new(pos.X, boxPos.Y - 36)
+                        data.name.Center = true
+                        data.dist.Visible = Vars.ESPDistance
+                        data.dist.Color = Vars.ESPTextColor
+                        data.dist.Text = "[" .. math.floor(distStuds) .. "m]"
+                        data.dist.Position = Vector2.new(pos.X, boxPos.Y - 20)
+                        data.dist.Center = true
+                        if Vars.ESPHealthBar and hum then
+                            data.health.Visible = true
+                            local hp = hum.Health / hum.MaxHealth
+                            data.health.Color = Color3.fromRGB(255*(1-hp), 255*hp, 0)
+                            data.health.Size = Vector2.new(3, height*hp)
+                            data.health.Position = Vector2.new(boxPos.X - 6, boxPos.Y + height*(1-hp))
+                        else
+                            data.health.Visible = false
+                        end
+                    end
+                end
+            end
         end
-        local root = p.Character.HumanoidRootPart
-        local hum = p.Character:FindFirstChildOfClass("Humanoid")
-        local head = p.Character:FindFirstChild("Head") or root
-        local distStuds = (myRoot.Position - root.Position).Magnitude
-        if distStuds > maxDist then
-            data.box.Visible = false; data.name.Visible = false
-            data.dist.Visible = false; data.health.Visible = false
-            continue
-        end
-        local pos, onScreen = Cam:WorldToViewportPoint(root.Position)
-        local headPos = Cam:WorldToViewportPoint(head.Position + Vector3.new(0, 0.5, 0))
-        if not onScreen then
-            data.box.Visible = false; data.name.Visible = false
-            data.dist.Visible = false; data.health.Visible = false
-            continue
-        end
-        local height = math.abs(pos.Y - headPos.Y) * 2.2
-        local width = height * 0.6
-        local boxPos = Vector2.new(pos.X - width / 2, pos.Y - height / 2)
-        data.box.Visible = Toggles.ESPBox.Value
-        data.box.Color = Options.ESPBoxColor.Value
-        data.box.Size = Vector2.new(width, height)
-        data.box.Position = boxPos
-        data.name.Visible = Toggles.ESPName.Value
-        data.name.Color = Options.ESPTextColor.Value
-        data.name.Text = p.Name
-        data.name.Position = Vector2.new(pos.X, boxPos.Y - 36)
-        data.name.Center = true
-        data.dist.Visible = Toggles.ESPDistance.Value
-        data.dist.Color = Options.ESPTextColor.Value
-        data.dist.Text = "[" .. math.floor(distStuds) .. "m]"
-        data.dist.Position = Vector2.new(pos.X, boxPos.Y - 20)
-        data.dist.Center = true
-        if Toggles.ESPHealthBar.Value and hum then
-            data.health.Visible = true
-            local hp = hum.Health / hum.MaxHealth
-            data.health.Color = Color3.fromRGB(255 * (1 - hp), 255 * hp, 0)
-            data.health.Size = Vector2.new(3, height * hp)
-            data.health.Position = Vector2.new(boxPos.X - 6, boxPos.Y + height * (1 - hp))
-        else
-            data.health.Visible = false
-        end
-    end
+    end)
 end)
 
--- ===== CHAMS =====
+-- ============================================================
+-- CHAMS
+-- ============================================================
 local chams = {}
 
 local function ApplyChams(p)
     if p == LP or not p.Character then return end
     if chams[p] then pcall(function() chams[p]:Destroy() end) end
-    local hl = Instance.new("Highlight")
-    hl.Name = "SigmaChams"
-    hl.FillColor = Options.ChamsFill.Value
-    hl.OutlineColor = Options.ChamsOutline.Value
-    hl.FillTransparency = Options.ChamsTransparency.Value
-    hl.OutlineTransparency = 0
-    hl.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
-    hl.Parent = p.Character
-    chams[p] = hl
+    local ok, hl = pcall(function()
+        local h = Instance.new("Highlight")
+        h.Name = "SigmaChams"
+        h.FillColor = Vars.ChamsFill
+        h.OutlineColor = Vars.ChamsOutline
+        h.FillTransparency = Vars.ChamsTransparency
+        h.OutlineTransparency = 0
+        h.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
+        h.Parent = p.Character
+        return h
+    end)
+    if ok then chams[p] = hl end
 end
 
 local function RemoveChams(p)
@@ -521,37 +600,42 @@ local function RemoveChams(p)
 end
 
 RunService.Heartbeat:Connect(function()
-    local myRoot = LP.Character and LP.Character:FindFirstChild("HumanoidRootPart")
-    local maxDist = Options.ChamsMaxDistance and Options.ChamsMaxDistance.Value or 1500
-    for _, p in ipairs(Players:GetPlayers()) do
-        if p == LP then continue end
-        local shouldShow = Toggles.ChamsEnabled.Value and p.Character and myRoot
-        if shouldShow and Toggles.ChamsTeamCheck.Value and p.Team == LP.Team then shouldShow = false end
-        if shouldShow then
-            local root = p.Character:FindFirstChild("HumanoidRootPart")
-            if not root or (myRoot.Position - root.Position).Magnitude > maxDist then shouldShow = false end
-        end
-        if shouldShow then
-            if not chams[p] or not chams[p].Parent then ApplyChams(p) end
-            if chams[p] then
-                chams[p].FillTransparency = Options.ChamsTransparency.Value
-                chams[p].OutlineColor = Options.ChamsOutline.Value
-                if Toggles.ChamsRainbow.Value then
-                    chams[p].FillColor = Color3.fromHSV((tick() * 0.5) % 1, 1, 1)
-                else
-                    chams[p].FillColor = Options.ChamsFill.Value
-                end
+    pcall(function()
+        local myRoot = LP.Character and LP.Character:FindFirstChild("HumanoidRootPart")
+        local maxDist = Vars.ChamsMaxDistance
+        for _, p in ipairs(Players:GetPlayers()) do
+            if p == LP then continue end
+            local show = Vars.ChamsEnabled and p.Character and myRoot
+            if show and Vars.ChamsTeamCheck and p.Team == LP.Team then show = false end
+            if show then
+                local root = p.Character:FindFirstChild("HumanoidRootPart")
+                if not root or (myRoot.Position - root.Position).Magnitude > maxDist then show = false end
             end
-        elseif chams[p] then
-            RemoveChams(p)
+            if show then
+                if not chams[p] or not chams[p].Parent then ApplyChams(p) end
+                if chams[p] then
+                    chams[p].FillTransparency = Vars.ChamsTransparency
+                    chams[p].OutlineColor = Vars.ChamsOutline
+                    if Vars.ChamsRainbow then
+                        chams[p].FillColor = Color3.fromHSV((tick()*0.5)%1,1,1)
+                    else
+                        chams[p].FillColor = Vars.ChamsFill
+                    end
+                end
+            elseif chams[p] then
+                RemoveChams(p)
+            end
         end
-    end
+    end)
 end)
 
 Players.PlayerRemoving:Connect(RemoveChams)
 
+-- ГОТОВО
 task.spawn(function()
     task.wait(1)
-    Library:Notify("Sigma Universal v1.6.2 loaded!", 5)
+    pcall(function() Library:Notify("Sigma Universal v2.0 loaded!", 5) end)
 end)
-print("Sigma Universal v1.6.2 ready")
+print("=== Sigma Universal v2.0 READY ===")
+print("Toggle Aimbot in menu, hold RMB to aim")
+print("Author: @sigmatop1jj")
