@@ -1,7 +1,6 @@
--- Sigma Universal v1.6.1
+-- Sigma Universal v1.6.2
 local repo = "https://raw.githubusercontent.com/violin-suzutsuki/LinoriaLib/main/"
 local Library = loadstring(game:HttpGet(repo .. "Library.lua"))()
-local Options, Toggles = Library.Options, Library.Toggles
 
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
@@ -17,11 +16,16 @@ local Def = {
     FogEnd = Lighting.FogEnd, FogColor = Lighting.FogColor,
 }
 
+-- ===== WINDOW (ДО получения Options!) =====
 local Window = Library:CreateWindow({
     Title = "Sigma Universal",
-    Footer = "Universal | v1.6.1",
+    Footer = "by @sigmatop1jj | v1.6.2",
     Center = true, AutoShow = true, Resizable = true,
 })
+
+-- ===== ТЕПЕРЬ Options доступен =====
+local Options = Library.Options
+local Toggles = Library.Toggles
 
 local Combat = Window:AddTab("Combat")
 local Visuals = Window:AddTab("Visuals")
@@ -153,7 +157,10 @@ WG3:AddToggle("SkyboxEnabled", { Text = "Enable Skybox", Default = false })
 local SG = Settings:AddLeftGroupbox("Menu")
 SG:AddLabel("Menu Keybind"):AddKeyPicker("MenuKeybind", { Default = "RightShift", NoUI = true, Text = "Menu Keybind" })
 SG:AddButton("Unload", function() Library:Unload() end)
-Library.ToggleKeybind = Options.MenuKeybind
+
+pcall(function()
+    Library.ToggleKeybind = Options.MenuKeybind
+end)
 
 local CreditGroup = Settings:AddRightGroupbox("Credits")
 CreditGroup:AddLabel("Script: Sigma Universal")
@@ -171,21 +178,16 @@ local function IsVisible(targetChar)
     if not targetChar then return false end
     local myChar = LP.Character
     if not myChar then return false end
-
     local myRoot = myChar:FindFirstChild("HumanoidRootPart")
     local targetRoot = targetChar:FindFirstChild("HumanoidRootPart")
     local targetHead = targetChar:FindFirstChild("Head") or targetRoot
     if not myRoot or not targetRoot or not targetHead then return false end
-
     local origin = Cam.CFrame.Position
     local targetPos = Toggles.AimbotMultipoint.Value and targetHead.Position or targetRoot.Position
-    local dir = (targetPos - origin)
-
     local params = RaycastParams.new()
     params.FilterType = Enum.RaycastFilterType.Exclude
     params.FilterDescendantsInstances = {myChar, targetChar, Cam}
-
-    local result = workspace:Raycast(origin, dir, params)
+    local result = workspace:Raycast(origin, (targetPos - origin), params)
     return result == nil
 end
 
@@ -197,9 +199,7 @@ local function GetClosestPlayer()
             if Toggles.ESPTeamCheck.Value and p.Team == LP.Team then continue end
             local hum = p.Character:FindFirstChildOfClass("Humanoid")
             if hum and hum.Health > 0 then
-                if Toggles.AimbotVisibleCheck.Value then
-                    if not IsVisible(p.Character) then continue end
-                end
+                if Toggles.AimbotVisibleCheck.Value and not IsVisible(p.Character) then continue end
                 local pos, onScreen = Cam:WorldToViewportPoint(p.Character.HumanoidRootPart.Position)
                 if onScreen then
                     local d = (Vector2.new(pos.X, pos.Y) - UIS:GetMouseLocation()).Magnitude
@@ -252,7 +252,6 @@ RunService.Heartbeat:Connect(function()
     if not char or not char:FindFirstChild("HumanoidRootPart") then return end
     local hum = char:FindFirstChildOfClass("Humanoid")
     local root = char.HumanoidRootPart
-
     if Toggles.Bunnyhop.Value and hum and hum.FloorMaterial ~= Enum.Material.Air then
         hum:ChangeState(Enum.HumanoidStateType.Jumping)
     end
@@ -285,13 +284,11 @@ RunService.Heartbeat:Connect(function()
         Lighting.OutdoorAmbient = Def.OutdoorAmbient
         Lighting.ExposureCompensation = 0
     end
-
     if Toggles.NoFog.Value then
         Lighting.FogStart = 0; Lighting.FogEnd = 1e6
     else
         Lighting.FogStart = Def.FogStart; Lighting.FogEnd = Def.FogEnd
     end
-
     Lighting.GlobalShadows = not Toggles.NoShadows.Value
     if Toggles.TimeChanger.Value then Lighting.ClockTime = Options.TimeValue.Value end
     if Toggles.AmbientOverride.Value then
@@ -299,7 +296,6 @@ RunService.Heartbeat:Connect(function()
     else
         Lighting.Ambient = Def.Ambient
     end
-
     if Toggles.AtmEnabled.Value then
         if not (Atm and Atm.Parent) then
             Atm = Instance.new("Atmosphere"); Atm.Name = "SigmaAtm"; Atm.Parent = Lighting
@@ -310,14 +306,12 @@ RunService.Heartbeat:Connect(function()
         Atm.Color = Options.AtmColor.Value
         Atm.Decay = Options.AtmDecay.Value
     elseif Atm then Atm:Destroy(); Atm = nil end
-
     if Toggles.Bloom.Value then
         if not (BloomFx and BloomFx.Parent) then
             BloomFx = Instance.new("BloomEffect"); BloomFx.Name = "SigmaBloom"; BloomFx.Parent = Lighting
         end
         BloomFx.Intensity = Options.BloomIntensity.Value
     elseif BloomFx then BloomFx:Destroy(); BloomFx = nil end
-
     if Toggles.ColorCorrection.Value then
         if not (CCFx and CCFx.Parent) then
             CCFx = Instance.new("ColorCorrectionEffect"); CCFx.Name = "SigmaCC"; CCFx.Parent = Lighting
@@ -326,7 +320,6 @@ RunService.Heartbeat:Connect(function()
         CCFx.Contrast = Options.Contrast.Value
         CCFx.TintColor = Options.CCTint.Value
     elseif CCFx then CCFx:Destroy(); CCFx = nil end
-
     if Toggles.FovChanger.Value then
         Cam.FieldOfView = Options.FovValue.Value
     else
@@ -453,28 +446,23 @@ Players.PlayerRemoving:Connect(RemoveESP)
 RunService.RenderStepped:Connect(function()
     local myRoot = LP.Character and LP.Character:FindFirstChild("HumanoidRootPart")
     local maxDist = Options.ESPMaxDistance and Options.ESPMaxDistance.Value or 1500
-
     for p, data in pairs(ESP_Data) do
         local shouldHide = not p.Character or not p.Character:FindFirstChild("HumanoidRootPart") or not myRoot
         if not shouldHide and Toggles.ESPTeamCheck.Value and p.Team == LP.Team then shouldHide = true end
-
         if shouldHide then
             data.box.Visible = false; data.name.Visible = false
             data.dist.Visible = false; data.health.Visible = false
             continue
         end
-
         local root = p.Character.HumanoidRootPart
         local hum = p.Character:FindFirstChildOfClass("Humanoid")
         local head = p.Character:FindFirstChild("Head") or root
         local distStuds = (myRoot.Position - root.Position).Magnitude
-
         if distStuds > maxDist then
             data.box.Visible = false; data.name.Visible = false
             data.dist.Visible = false; data.health.Visible = false
             continue
         end
-
         local pos, onScreen = Cam:WorldToViewportPoint(root.Position)
         local headPos = Cam:WorldToViewportPoint(head.Position + Vector3.new(0, 0.5, 0))
         if not onScreen then
@@ -482,28 +470,23 @@ RunService.RenderStepped:Connect(function()
             data.dist.Visible = false; data.health.Visible = false
             continue
         end
-
         local height = math.abs(pos.Y - headPos.Y) * 2.2
         local width = height * 0.6
         local boxPos = Vector2.new(pos.X - width / 2, pos.Y - height / 2)
-
         data.box.Visible = Toggles.ESPBox.Value
         data.box.Color = Options.ESPBoxColor.Value
         data.box.Size = Vector2.new(width, height)
         data.box.Position = boxPos
-
         data.name.Visible = Toggles.ESPName.Value
         data.name.Color = Options.ESPTextColor.Value
         data.name.Text = p.Name
         data.name.Position = Vector2.new(pos.X, boxPos.Y - 36)
         data.name.Center = true
-
         data.dist.Visible = Toggles.ESPDistance.Value
         data.dist.Color = Options.ESPTextColor.Value
         data.dist.Text = "[" .. math.floor(distStuds) .. "m]"
         data.dist.Position = Vector2.new(pos.X, boxPos.Y - 20)
         data.dist.Center = true
-
         if Toggles.ESPHealthBar.Value and hum then
             data.health.Visible = true
             local hp = hum.Health / hum.MaxHealth
@@ -540,17 +523,14 @@ end
 RunService.Heartbeat:Connect(function()
     local myRoot = LP.Character and LP.Character:FindFirstChild("HumanoidRootPart")
     local maxDist = Options.ChamsMaxDistance and Options.ChamsMaxDistance.Value or 1500
-
     for _, p in ipairs(Players:GetPlayers()) do
         if p == LP then continue end
         local shouldShow = Toggles.ChamsEnabled.Value and p.Character and myRoot
         if shouldShow and Toggles.ChamsTeamCheck.Value and p.Team == LP.Team then shouldShow = false end
-
         if shouldShow then
             local root = p.Character:FindFirstChild("HumanoidRootPart")
             if not root or (myRoot.Position - root.Position).Magnitude > maxDist then shouldShow = false end
         end
-
         if shouldShow then
             if not chams[p] or not chams[p].Parent then ApplyChams(p) end
             if chams[p] then
@@ -572,6 +552,6 @@ Players.PlayerRemoving:Connect(RemoveChams)
 
 task.spawn(function()
     task.wait(1)
-    Library:Notify("Sigma Universal v1.6.1 loaded!", 5)
+    Library:Notify("Sigma Universal v1.6.2 loaded!", 5)
 end)
-print("Sigma Universal v1.6.1 ready")
+print("Sigma Universal v1.6.2 ready")
