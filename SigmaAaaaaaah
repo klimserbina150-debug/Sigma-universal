@@ -1,4 +1,4 @@
--- Sigma Universal v2.5
+-- Sigma Universal v2.8
 -- by @sigmatop1jj
 
 if getgenv().SigmaLoaded then warn("Sigma already loaded!") return end
@@ -9,7 +9,7 @@ local Library = loadstring(game:HttpGet(repo .. "Library.lua"))()
 
 local Window = Library:CreateWindow({
     Title = "Sigma Universal",
-    Footer = "by @sigmatop1jj | v2.5",
+    Footer = "by @sigmatop1jj | v2.8",
     Center = true, AutoShow = true, Resizable = true,
 })
 
@@ -17,22 +17,50 @@ local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local UIS = game:GetService("UserInputService")
 local Lighting = game:GetService("Lighting")
+local TweenService = game:GetService("TweenService")
+local Debris = game:GetService("Debris")
 local LP = Players.LocalPlayer
 local Cam = workspace.CurrentCamera
 local VEC0 = Vector3.new(0, 0, 0)
 
+-- KEY STATE TRACKER
+local keyStates, mouseStates = {}, {}
+UIS.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 then mouseStates.MouseButton1 = true
+    elseif input.UserInputType == Enum.UserInputType.MouseButton2 then mouseStates.MouseButton2 = true
+    elseif input.UserInputType == Enum.UserInputType.MouseButton3 then mouseStates.MouseButton3 = true end
+    if input.KeyCode ~= Enum.KeyCode.Unknown then keyStates[input.KeyCode.Name] = true end
+end)
+UIS.InputEnded:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 then mouseStates.MouseButton1 = false
+    elseif input.UserInputType == Enum.UserInputType.MouseButton2 then mouseStates.MouseButton2 = false
+    elseif input.UserInputType == Enum.UserInputType.MouseButton3 then mouseStates.MouseButton3 = false end
+    if input.KeyCode ~= Enum.KeyCode.Unknown then keyStates[input.KeyCode.Name] = false end
+end)
+
+local function IsKeybindActive(keyStr)
+    if not keyStr or keyStr == "" then return false end
+    keyStr = tostring(keyStr)
+    if keyStr:find("MouseButton") then return mouseStates[keyStr] == true end
+    return keyStates[keyStr] == true
+end
+
+-- VARS
 local Vars = {
-    AimbotEnabled=false, AimbotVisibleCheck=true, AimbotFov=150,
-    AimbotSmoothness=5, AimbotPrediction=0.165, AimbotMultipoint=true,
-    AimbotAlways=false, AimbotTarget="Head", AimbotMaxDistance=1500,
-    AimbotKeybind="MouseButton2",
-    AimbotIgnoreList={},  -- 🔥 NEW
-    TriggerBotEnabled=false, TriggerBotFov=25, TriggerBotDelay=0.1,
-    TriggerBotVisibleCheck=true, TriggerBotTarget="Head", TriggerBotMaxDistance=500,
-    TriggerBotIgnoreList={},  -- 🔥 NEW
+    AimbotEnabled=false, AimbotAlways=false, AimbotVisibleCheck=true,
+    AimbotFov=150, AimbotSmoothness=5, AimbotPrediction=0.165,
+    AimbotMultipoint=true, AimbotTarget="Head", AimbotMaxDistance=1500,
+    AimbotKeybind="MouseButton2", AimbotIgnoreList={},
+    TriggerBotEnabled=false, TriggerBotFov=50, TriggerBotDelay=0.1,
+    TriggerBotVisibleCheck=true, TriggerBotTarget="Head",
+    TriggerBotMaxDistance=500, TriggerBotIgnoreList={},
     HitboxEnabled=false, HitboxScale=2, HitboxTeamCheck=true,
     FovCircleEnabled=true, FovCircleFilled=false, FovCircleThickness=2,
     FovCircleRainbow=false, FovCircleColor=Color3.fromRGB(255,255,255),
+    TracerEnabled=false, TracerLifetime=0.5, TracerThickness=0.1,
+    TracerColor=Color3.fromRGB(0,255,255), TracerGlow=true, TracerStartTransparency=0,
+    HitSoundEnabled=false, HitSoundChoice="None", HitSoundVolume=1,
+    CustomShootSoundEnabled=false, CustomShootSoundChoice="None", CustomShootSoundVolume=5,
     Fullbright=false, Brightness=2, NoFog=false, NoShadows=false,
     FovChanger=false, FovValue=70,
     Bloom=false, BloomIntensity=0.7, ColorCorrection=false,
@@ -53,8 +81,6 @@ local Vars = {
     OptNoWaterWaves=true, OptNoTextures=false, OptQuality=1,
 }
 
-local Options, Toggles = Library.Options, Library.Toggles
-
 local function T(box, key, text, default)
     box:AddToggle(key, { Text=text, Default = default or Vars[key], Callback=function(v) Vars[key] = v end })
 end
@@ -65,26 +91,36 @@ local function C(box, key, text, default)
     box:AddLabel(text):AddColorPicker(key, { Default = default or Vars[key], Callback=function(v) Vars[key] = v end })
 end
 
--- 🔥 Функция для обновления списка игроков в dropdown
-local function UpdateIgnoreLists()
-    local names = {}
-    for _, p in ipairs(Players:GetPlayers()) do
-        if p ~= LP then table.insert(names, p.Name) end
-    end
-    table.sort(names)
+-- SOUND LISTS
+local HSList = {
+    ["None"]="", ["Skeet"]="rbxassetid://83717596220569",
+    ["Sonic Checkpoint"]="rbxassetid://6817150445", ["Sonic.exe Laugh"]="rbxassetid://18379039436",
+    ["Windows XP Error"]="rbxassetid://9066167010", ["Minecraft Hit"]="rbxassetid://8766809464",
+    ["One Sit Dog"]="rbxassetid://7380502345", ["Door Bell"]="rbxassetid://131845870598154",
+    ["Duck"]="rbxassetid://1139819274", ["MGS Alert"]="rbxassetid://81845122657643",
+    ["Money"]="rbxassetid://9117067586", ["Fart"]="rbxassetid://4809574295",
+    ["Meow"]="rbxassetid://7148585764", ["Bye Bye"]="rbxassetid://70888261086432",
+    ["Bell"]="rbxassetid://123827281575056", ["Metal"]="rbxassetid://9125672731",
+    ["Growl"]="rbxassetid://136705296952779", ["Brutal"]="rbxassetid://82176913611683",
+    ["Sparkle"]="rbxassetid://78601008552434", ["Aray Ko"]="rbxassetid://122864243311961",
+    ["Hehe"]="rbxassetid://18381322350",
+}
+local ShootSoundList = {
+    ["None"]="", ["Osu"]="rbxassetid://7172607676", ["Pop"]="rbxassetid://9125402735",
+    ["MLG"]="rbxassetid://109817519733426", ["Ouch"]="rbxassetid://136844926219636",
+    ["Fire"]="rbxassetid://130412184952886", ["Bonk"]="rbxassetid://5682262154",
+    ["Bell"]="rbxassetid://131573697", ["Rust"]="rbxassetid://5043539486",
+    ["Metal"]="rbxassetid://8917041751", ["Skeet"]="rbxassetid://83717596220569",
+    ["Quack"]="rbxassetid://6435400690", ["Katana"]="rbxassetid://7122613461",
+    ["Neverlose"]="rbxassetid://18391691942", ["Undertale"]="rbxassetid://1471213022",
+    ["TF2 Critical"]="rbxassetid://8255306220", ["TF2 Frying Pan"]="rbxassetid://18922477538",
+}
+local HSNames, ShootSoundNames = {}, {}
+for k in pairs(HSList) do table.insert(HSNames, k) end
+for k in pairs(ShootSoundList) do table.insert(ShootSoundNames, k) end
+table.sort(HSNames); table.sort(ShootSoundNames)
 
-    pcall(function()
-        if Options and Options.AimbotIgnoreList then
-            Options.AimbotIgnoreList:SetValues(names)
-        end
-    end)
-    pcall(function()
-        if Options and Options.TriggerBotIgnoreList then
-            Options.TriggerBotIgnoreList:SetValues(names)
-        end
-    end)
-end
-
+-- TABS
 local Combat = Window:AddTab("Combat")
 local Visuals = Window:AddTab("Visuals")
 local ESPTab = Window:AddTab("ESP")
@@ -95,28 +131,22 @@ local Settings = Window:AddTab("Settings")
 -- COMBAT
 local CG = Combat:AddLeftGroupbox("Aimbot")
 T(CG,"AimbotEnabled","Aimbot",false)
-T(CG,"AimbotAlways","Auto Aim (no key needed)",false)
+T(CG,"AimbotAlways","Auto Aim (no key)",false)
 CG:AddLabel("Aim Keybind"):AddKeyPicker("AimKeybind", {
-    Default = "MouseButton2",
-    Text = "Aim Key",
-    Callback = function(v)
-        if type(v) == "table" then Vars.AimbotKeybind = v.Key or "MouseButton2"
-        else Vars.AimbotKeybind = v end
+    Default="MouseButton2", Text="Aim Key",
+    Callback=function(v)
+        if type(v)=="table" then Vars.AimbotKeybind = v.Key or "MouseButton2"
+        else Vars.AimbotKeybind = tostring(v) end
     end,
 })
 T(CG,"AimbotVisibleCheck","Visible Check",true)
 CG:AddDropdown("AimbotTarget", {
-    Text = "Target Part",
-    Values = {"Head", "Torso", "HumanoidRootPart"},
-    Default = "Head",
-    Callback = function(v) Vars.AimbotTarget = v end,
+    Text="Target Part", Values={"Head","Torso","HumanoidRootPart"}, Default="Head",
+    Callback=function(v) Vars.AimbotTarget = v end,
 })
-CG:AddDropdown("AimbotIgnoreList", {  -- 🔥 NEW
-    Text = "Ignore Players",
-    Values = {},
-    Default = {},
-    Multi = true,
-    Callback = function(v) Vars.AimbotIgnoreList = v or {} end,
+local AimbotIgnoreDropdown = CG:AddDropdown("AimbotIgnoreList", {
+    Text="Ignore Players", Values={}, Default={}, Multi=true,
+    Callback=function(v) Vars.AimbotIgnoreList = v or {} end,
 })
 S(CG,"AimbotFov","FOV",150,10,800,0)
 S(CG,"AimbotMaxDistance","Max Distance (studs)",1500,0,10000,0)
@@ -132,21 +162,16 @@ local TB = Combat:AddLeftGroupbox("Trigger Bot")
 T(TB,"TriggerBotEnabled","Trigger Bot",false)
 T(TB,"TriggerBotVisibleCheck","Visible Check",true)
 TB:AddDropdown("TriggerBotTarget", {
-    Text = "Target Part",
-    Values = {"Head", "Torso", "HumanoidRootPart"},
-    Default = "Head",
-    Callback = function(v) Vars.TriggerBotTarget = v end,
+    Text="Target Part", Values={"Head","Torso","HumanoidRootPart"}, Default="Head",
+    Callback=function(v) Vars.TriggerBotTarget = v end,
 })
-TB:AddDropdown("TriggerBotIgnoreList", {  -- 🔥 NEW
-    Text = "Ignore Players",
-    Values = {},
-    Default = {},
-    Multi = true,
-    Callback = function(v) Vars.TriggerBotIgnoreList = v or {} end,
+local TriggerIgnoreDropdown = TB:AddDropdown("TriggerBotIgnoreList", {
+    Text="Ignore Players", Values={}, Default={}, Multi=true,
+    Callback=function(v) Vars.TriggerBotIgnoreList = v or {} end,
 })
-S(TB,"TriggerBotFov","Trigger FOV (pixels)",25,1,300,0)
+S(TB,"TriggerBotFov","Center FOV (pixels)",50,1,300,0)
 S(TB,"TriggerBotMaxDistance","Max Distance (studs)",500,0,10000,0)
-S(TB,"TriggerBotDelay","Delay (seconds)",0.1,0.01,1,2)
+S(TB,"TriggerBotDelay","Delay (sec)",0.1,0.01,1,2)
 
 local FOVC = Combat:AddRightGroupbox("Aim FOV Circle")
 T(FOVC,"FovCircleEnabled","Show Circle",true)
@@ -155,13 +180,19 @@ S(FOVC,"FovCircleThickness","Thickness",2,1,10,0)
 T(FOVC,"FovCircleRainbow","Rainbow",false)
 C(FOVC,"FovCircleColor","Color",Color3.fromRGB(255,255,255))
 
--- Первичное заполнение + автообновление
-task.spawn(function()
-    task.wait(1)
-    UpdateIgnoreLists()
-end)
-Players.PlayerAdded:Connect(function() task.wait(1) UpdateIgnoreLists() end)
-Players.PlayerRemoving:Connect(function() task.wait(0.5) UpdateIgnoreLists() end)
+-- IGNORE LIST UPDATE
+local function UpdateIgnoreLists()
+    local names = {}
+    for _, p in ipairs(Players:GetPlayers()) do
+        if p ~= LP then table.insert(names, p.Name) end
+    end
+    table.sort(names)
+    pcall(function() AimbotIgnoreDropdown:SetValues(names) end)
+    pcall(function() TriggerIgnoreDropdown:SetValues(names) end)
+end
+task.spawn(function() task.wait(1); UpdateIgnoreLists() end)
+Players.PlayerAdded:Connect(function() task.wait(1); UpdateIgnoreLists() end)
+Players.PlayerRemoving:Connect(function() task.wait(0.5); UpdateIgnoreLists() end)
 
 -- VISUALS
 local VG = Visuals:AddLeftGroupbox("Fullbright")
@@ -169,6 +200,29 @@ T(VG,"Fullbright","Fullbright",false)
 S(VG,"Brightness","Brightness",2,0,10,1)
 T(VG,"NoFog","Remove Fog",false)
 T(VG,"NoShadows","No Shadows",false)
+
+local TRG = Visuals:AddLeftGroupbox("Tracers")
+T(TRG,"TracerEnabled","Bullet Tracers",false)
+S(TRG,"TracerLifetime","Lifetime (sec)",0.5,0.1,3,2)
+S(TRG,"TracerThickness","Thickness",0.1,0.02,1,2)
+S(TRG,"TracerStartTransparency","Start Transparency",0,0,1,2)
+T(TRG,"TracerGlow","Glow",true)
+C(TRG,"TracerColor","Color",Color3.fromRGB(0,255,255))
+
+local SG2 = Visuals:AddLeftGroupbox("Sounds")
+T(SG2,"HitSoundEnabled","Hit Sound",false)
+SG2:AddDropdown("HitSoundChoice", {
+    Text="Hit Sound", Values=HSNames, Default="None",
+    Callback=function(v) Vars.HitSoundChoice = v end,
+})
+S(SG2,"HitSoundVolume","Hit Volume",1,0,10,1)
+SG2:AddDivider()
+T(SG2,"CustomShootSoundEnabled","Custom Shoot Sound",false)
+SG2:AddDropdown("CustomShootSoundChoice", {
+    Text="Shoot Sound", Values=ShootSoundNames, Default="None",
+    Callback=function(v) Vars.CustomShootSoundChoice = v end,
+})
+S(SG2,"CustomShootSoundVolume","Shoot Volume",5,0,10,1)
 
 local VG2 = Visuals:AddRightGroupbox("Camera")
 T(VG2,"FovChanger","FOV Changer",false)
@@ -255,100 +309,69 @@ SG:AddLabel("Menu Keybind (RightShift)")
 SG:AddButton("Unload", function() pcall(function() Library:Unload() end) end)
 
 local CreditGroup = Settings:AddRightGroupbox("Credits")
-CreditGroup:AddLabel("Script: Sigma Universal v2.5")
+CreditGroup:AddLabel("Script: Sigma Universal v2.8")
 CreditGroup:AddLabel("Author: @sigmatop1jj")
 CreditGroup:AddDivider()
 CreditGroup:AddButton("Copy Telegram", function()
     pcall(function()
-        if setclipboard then
-            setclipboard("@sigmatop1jj")
-            Library:Notify("Copied: @sigmatop1jj", 3)
-        end
+        if setclipboard then setclipboard("@sigmatop1jj"); Library:Notify("Copied", 3) end
     end)
 end)
 
--- ============================================================
--- KEYBIND CHECKER
--- ============================================================
-local function IsKeybindActive(keyStr)
-    if not keyStr or keyStr == "" then return false end
-    keyStr = tostring(keyStr)
-    if keyStr:find("MouseButton") then
-        local ok, inputType = pcall(function() return Enum.UserInputType[keyStr] end)
-        if ok and inputType then return UIS:IsMouseButtonPressed(inputType) end
-    end
-    local ok, keycode = pcall(function() return Enum.KeyCode[keyStr] end)
-    if ok and keycode then return UIS:IsKeyDown(keycode) end
-    return false
-end
-
--- ============================================================
--- IGNORE CHECK 🔥
--- ============================================================
+-- IGNORE CHECK
 local function IsIgnoredByAim(p)
     if not p or not Vars.AimbotIgnoreList then return false end
     return Vars.AimbotIgnoreList[p.Name] == true
 end
-
 local function IsIgnoredByTrigger(p)
     if not p or not Vars.TriggerBotIgnoreList then return false end
     return Vars.TriggerBotIgnoreList[p.Name] == true
 end
 
--- ============================================================
--- TARGET PART RESOLVER
--- ============================================================
-local function GetTargetPart(char, targetMode)
+-- TARGET PART
+local function GetTargetPart(char, mode)
     if not char then return nil end
-    targetMode = targetMode or "Head"
-    if targetMode == "Head" then
-        return char:FindFirstChild("Head") or char:FindFirstChild("UpperTorso")
-            or char:FindFirstChild("Torso") or char:FindFirstChild("HumanoidRootPart")
-    elseif targetMode == "Torso" then
-        return char:FindFirstChild("UpperTorso") or char:FindFirstChild("Torso")
-            or char:FindFirstChild("HumanoidRootPart") or char:FindFirstChild("Head")
-    elseif targetMode == "HumanoidRootPart" then
-        return char:FindFirstChild("HumanoidRootPart") or char:FindFirstChild("UpperTorso")
-            or char:FindFirstChild("Torso") or char:FindFirstChild("Head")
+    mode = mode or "Head"
+    if mode == "Head" then
+        return char:FindFirstChild("Head") or char:FindFirstChild("UpperTorso") or char:FindFirstChild("Torso") or char:FindFirstChild("HumanoidRootPart")
+    elseif mode == "Torso" then
+        return char:FindFirstChild("UpperTorso") or char:FindFirstChild("Torso") or char:FindFirstChild("HumanoidRootPart") or char:FindFirstChild("Head")
+    elseif mode == "HumanoidRootPart" then
+        return char:FindFirstChild("HumanoidRootPart") or char:FindFirstChild("UpperTorso") or char:FindFirstChild("Torso") or char:FindFirstChild("Head")
     end
     return char:FindFirstChild("Head") or char:FindFirstChild("HumanoidRootPart")
 end
 
--- ============================================================
 -- VISIBLE CHECK
--- ============================================================
 local excludeEnum = Enum.RaycastFilterType.Exclude or Enum.RaycastFilterType.Blacklist
-
-local function IsVisible(targetChar, targetMode)
+local function IsVisible(targetChar, mode)
     local ok, result = pcall(function()
         if not targetChar then return false end
         local myChar = LP.Character
         if not myChar then return false end
         local myRoot = myChar:FindFirstChild("HumanoidRootPart")
-        local targetPart = GetTargetPart(targetChar, targetMode)
+        local targetPart = GetTargetPart(targetChar, mode)
         if not myRoot or not targetPart then return false end
-        local origin = Cam.CFrame.Position
         local params = RaycastParams.new()
         params.FilterType = excludeEnum
         params.FilterDescendantsInstances = {myChar, targetChar, Cam}
-        local res = workspace:Raycast(origin, (targetPart.Position - origin), params)
+        local res = workspace:Raycast(Cam.CFrame.Position, (targetPart.Position - Cam.CFrame.Position), params)
         return res == nil
     end)
     return ok and result or false
 end
 
--- ============================================================
--- AIMBOT (с ignore list)
--- ============================================================
+-- AIMBOT
 local function GetClosestPlayer()
     local ok, result = pcall(function()
         local myRoot = LP.Character and LP.Character:FindFirstChild("HumanoidRootPart")
         if not myRoot then return nil end
         local target, shortest = nil, Vars.AimbotFov
+        local center = Vector2.new(Cam.ViewportSize.X/2, Cam.ViewportSize.Y/2)
         for _, p in ipairs(Players:GetPlayers()) do
             if p ~= LP and p.Character and p.Character:FindFirstChild("HumanoidRootPart") then
                 if Vars.ESPTeamCheck and p.Team == LP.Team then continue end
-                if IsIgnoredByAim(p) then continue end  -- 🔥 IGNORE CHECK
+                if IsIgnoredByAim(p) then continue end
                 local hum = p.Character:FindFirstChildOfClass("Humanoid")
                 if hum and hum.Health > 0 then
                     local pRoot = p.Character.HumanoidRootPart
@@ -358,7 +381,7 @@ local function GetClosestPlayer()
                     if not targetPart then continue end
                     local pos, onScreen = Cam:WorldToViewportPoint(targetPart.Position)
                     if onScreen then
-                        local d = (Vector2.new(pos.X, pos.Y) - UIS:GetMouseLocation()).Magnitude
+                        local d = (Vector2.new(pos.X, pos.Y) - center).Magnitude
                         if d < shortest then shortest = d; target = p.Character end
                     end
                 end
@@ -385,9 +408,7 @@ RunService.RenderStepped:Connect(function()
     end)
 end)
 
--- ============================================================
 -- HITBOX EXPANDER
--- ============================================================
 local function ApplyHitbox(char)
     if not char then return end
     local hrp = char:FindFirstChild("HumanoidRootPart")
@@ -405,9 +426,7 @@ local function ApplyHitbox(char)
     hitbox.Anchored = false
     hitbox.Parent = char
     local weld = Instance.new("WeldConstraint")
-    weld.Part0 = hitbox
-    weld.Part1 = hrp
-    weld.Parent = hitbox
+    weld.Part0 = hitbox; weld.Part1 = hrp; weld.Parent = hitbox
     hitbox.CFrame = hrp.CFrame
 end
 
@@ -450,25 +469,18 @@ Players.PlayerRemoving:Connect(function(p)
     end
 end)
 
--- ============================================================
--- TRIGGER BOT (с ignore list)
--- ============================================================
+-- TRIGGER BOT (центр экрана)
 local lastTriggerTime = 0
-
 local function ClickMouse()
     if mouse1click then pcall(mouse1click); return true end
-    if mouse1press and mouse1release then
-        pcall(function() mouse1press(); task.wait(0.02); mouse1release() end); return true
-    end
-    if keypress and keyrelease then
-        pcall(function() keypress(0x01); task.wait(0.02); keyrelease(0x01) end); return true
-    end
+    if mouse1press and mouse1release then pcall(function() mouse1press(); task.wait(0.02); mouse1release() end); return true end
+    if keypress and keyrelease then pcall(function() keypress(0x01); task.wait(0.02); keyrelease(0x01) end); return true end
     pcall(function()
         local VIM = game:GetService("VirtualInputManager")
-        local mouseLoc = UIS:GetMouseLocation()
-        VIM:SendMouseButtonEvent(mouseLoc.X, mouseLoc.Y, 0, true, game, 0)
+        local ml = UIS:GetMouseLocation()
+        VIM:SendMouseButtonEvent(ml.X, ml.Y, 0, true, game, 0)
         task.wait(0.02)
-        VIM:SendMouseButtonEvent(mouseLoc.X, mouseLoc.Y, 0, false, game, 0)
+        VIM:SendMouseButtonEvent(ml.X, ml.Y, 0, false, game, 0)
     end)
     return true
 end
@@ -480,13 +492,12 @@ RunService.RenderStepped:Connect(function()
         if now - lastTriggerTime < Vars.TriggerBotDelay then return end
         local myRoot = LP.Character and LP.Character:FindFirstChild("HumanoidRootPart")
         if not myRoot then return end
-        local mouseLoc = UIS:GetMouseLocation()
-        local foundTarget = false
-
+        local center = Vector2.new(Cam.ViewportSize.X/2, Cam.ViewportSize.Y/2)
+        local found = false
         for _, p in ipairs(Players:GetPlayers()) do
             if p ~= LP and p.Character and p.Character:FindFirstChild("HumanoidRootPart") then
                 if Vars.ESPTeamCheck and p.Team == LP.Team then continue end
-                if IsIgnoredByTrigger(p) then continue end  -- 🔥 IGNORE CHECK
+                if IsIgnoredByTrigger(p) then continue end
                 local hum = p.Character:FindFirstChildOfClass("Humanoid")
                 if hum and hum.Health > 0 then
                     local pRoot = p.Character.HumanoidRootPart
@@ -496,24 +507,18 @@ RunService.RenderStepped:Connect(function()
                     if targetPart then
                         local pos, onScreen = Cam:WorldToViewportPoint(targetPart.Position)
                         if onScreen then
-                            local d = (Vector2.new(pos.X, pos.Y) - mouseLoc).Magnitude
-                            if d < Vars.TriggerBotFov then foundTarget = true; break end
+                            local d = (Vector2.new(pos.X, pos.Y) - center).Magnitude
+                            if d < Vars.TriggerBotFov then found = true; break end
                         end
                     end
                 end
             end
         end
-
-        if foundTarget then
-            ClickMouse()
-            lastTriggerTime = now
-        end
+        if found then ClickMouse(); lastTriggerTime = now end
     end)
 end)
 
--- ============================================================
 -- FOV CIRCLE
--- ============================================================
 local FovCircle, FovLines = nil, nil
 pcall(function()
     FovCircle = Drawing.new("Circle")
@@ -531,8 +536,8 @@ RunService.RenderStepped:Connect(function()
     pcall(function()
         local color = Vars.FovCircleColor
         if Vars.FovCircleRainbow then color = Color3.fromHSV((tick()*0.5)%1,1,1) end
-        local radius = Vars.AimbotFov
         local center = Vector2.new(Cam.ViewportSize.X/2, Cam.ViewportSize.Y/2)
+        local radius = Vars.AimbotFov
         if FovCircle then
             if not Vars.FovCircleEnabled then FovCircle.Visible = false; return end
             FovCircle.Visible = true
@@ -557,9 +562,117 @@ RunService.RenderStepped:Connect(function()
     end)
 end)
 
--- ============================================================
+-- TRACERS
+local function CreateTracer()
+    pcall(function()
+        if not Vars.TracerEnabled then return end
+        local char = LP.Character
+        if not char then return end
+        local muzzle = nil
+        local tool = char:FindFirstChildOfClass("Tool")
+        if tool then
+            muzzle = tool:FindFirstChild("Handle") or tool:FindFirstChild("Barrel") or tool:FindFirstChild("Muzzle") or tool:FindFirstChildWhichIsA("BasePart")
+        end
+        if not muzzle then muzzle = char:FindFirstChild("RightHand") or char:FindFirstChild("Right Arm") or char:FindFirstChild("HumanoidRootPart") end
+        if not muzzle then return end
+        local origin = Cam.CFrame.Position
+        local params = RaycastParams.new()
+        params.FilterType = excludeEnum
+        params.FilterDescendantsInstances = {char, Cam}
+        local res = workspace:Raycast(origin, Cam.CFrame.LookVector * 1000, params)
+        local hitPos = res and res.Position or (origin + Cam.CFrame.LookVector * 1000)
+        local startPos = muzzle.Position
+        local dist = (hitPos - startPos).Magnitude
+        if dist < 1 then return end
+        local tracer = Instance.new("Part")
+        tracer.Name = "SigmaTracer"
+        tracer.Size = Vector3.new(Vars.TracerThickness, Vars.TracerThickness, dist)
+        local ok, cf = pcall(function() return CFrame.lookAt(startPos, hitPos) end)
+        if not ok then return end
+        tracer.CFrame = cf * CFrame.new(0, 0, -dist/2)
+        tracer.Anchored = true
+        tracer.CanCollide = false
+        tracer.CanQuery = false
+        tracer.CanTouch = false
+        tracer.Material = Enum.Material.Neon
+        tracer.Color = Vars.TracerColor
+        tracer.Transparency = Vars.TracerStartTransparency
+        tracer.Parent = workspace
+        if Vars.TracerGlow then
+            local light = Instance.new("PointLight")
+            light.Color = Vars.TracerColor; light.Brightness = 3; light.Range = 8
+            light.Parent = tracer
+        end
+        local tween = TweenService:Create(tracer, TweenInfo.new(Vars.TracerLifetime, Enum.EasingStyle.Linear), { Transparency = 1 })
+        tween:Play()
+        Debris:AddItem(tracer, Vars.TracerLifetime + 0.1)
+    end)
+end
+
+-- HIT SOUNDS
+local hitSoundOriginals = {}
+local function ApplyHitSoundToTool(tool)
+    if not tool or not tool:IsA("Tool") then return end
+    task.spawn(function()
+        local ba = tool:FindFirstChild("BodyAttach") or tool:WaitForChild("BodyAttach", 5)
+        if ba then
+            for _, sn in ipairs({"HitClient","HeadShotClient","HitCharacterClient"}) do
+                local s = ba:FindFirstChild(sn) or ba:WaitForChild(sn, 3)
+                if s and s:IsA("Sound") then
+                    if not hitSoundOriginals[s] then
+                        hitSoundOriginals[s] = { SoundId = s.SoundId, Volume = s.Volume }
+                    end
+                    local id = HSList[Vars.HitSoundChoice] or ""
+                    if id ~= "" then s.SoundId = id
+                    else
+                        local o = hitSoundOriginals[s]
+                        if o then s.SoundId = o.SoundId end
+                    end
+                    s.Volume = Vars.HitSoundVolume
+                end
+            end
+        end
+    end)
+end
+local function ApplyHitSoundToChar(ch)
+    if not ch then return end
+    for _, c in ipairs(ch:GetChildren()) do
+        if c:IsA("Tool") then ApplyHitSoundToTool(c) end
+    end
+end
+local function RestoreHitSounds()
+    for snd, d in pairs(hitSoundOriginals) do
+        if snd and snd.Parent then pcall(function() snd.SoundId = d.SoundId; snd.Volume = d.Volume end) end
+    end
+    hitSoundOriginals = {}
+end
+
+-- LMB HOOK: трассер + custom shoot sound
+local lastShootSound = 0
+UIS.InputBegan:Connect(function(input, processed)
+    if processed then return end
+    if input.UserInputType ~= Enum.UserInputType.MouseButton1 then return end
+    CreateTracer()
+    if Vars.CustomShootSoundEnabled and Vars.CustomShootSoundChoice ~= "None" then
+        local char = LP.Character
+        if not char then return end
+        if not char:FindFirstChildOfClass("Tool") then return end
+        local now = tick()
+        if now - lastShootSound < 0.05 then return end
+        lastShootSound = now
+        local id = ShootSoundList[Vars.CustomShootSoundChoice] or ""
+        if id == "" then return end
+        pcall(function()
+            local snd = Instance.new("Sound")
+            snd.SoundId = id; snd.Volume = Vars.CustomShootSoundVolume
+            snd.Parent = char
+            snd:Play()
+            Debris:AddItem(snd, 3)
+        end)
+    end
+end)
+
 -- MOVEMENT
--- ============================================================
 RunService.Heartbeat:Connect(function()
     pcall(function()
         local char = LP.Character
@@ -586,9 +699,7 @@ RunService.Heartbeat:Connect(function()
     end)
 end)
 
--- ============================================================
 -- WORLD
--- ============================================================
 local Def = {
     Brightness=Lighting.Brightness, ClockTime=Lighting.ClockTime,
     GlobalShadows=Lighting.GlobalShadows, OutdoorAmbient=Lighting.OutdoorAmbient,
@@ -596,7 +707,6 @@ local Def = {
     FogEnd=Lighting.FogEnd, FogColor=Lighting.FogColor,
 }
 local Atm, BloomFx, CCFx = nil, nil, nil
-
 RunService.Heartbeat:Connect(function()
     pcall(function()
         if Vars.Fullbright then
@@ -608,43 +718,32 @@ RunService.Heartbeat:Connect(function()
             Lighting.OutdoorAmbient = Def.OutdoorAmbient
             Lighting.ExposureCompensation = 0
         end
-        if Vars.NoFog then
-            Lighting.FogStart = 0; Lighting.FogEnd = 1e6
-        else
-            Lighting.FogStart = Def.FogStart; Lighting.FogEnd = Def.FogEnd
-        end
+        if Vars.NoFog then Lighting.FogStart = 0; Lighting.FogEnd = 1e6
+        else Lighting.FogStart = Def.FogStart; Lighting.FogEnd = Def.FogEnd end
         Lighting.GlobalShadows = not Vars.NoShadows
         if Vars.TimeChanger then Lighting.ClockTime = Vars.TimeValue end
         if Vars.AmbientOverride then Lighting.Ambient = Vars.AmbientColor
         else Lighting.Ambient = Def.Ambient end
         if Vars.AtmEnabled then
-            if not (Atm and Atm.Parent) then
-                Atm = Instance.new("Atmosphere"); Atm.Name = "SigmaAtm"; Atm.Parent = Lighting
-            end
+            if not (Atm and Atm.Parent) then Atm = Instance.new("Atmosphere"); Atm.Name = "SigmaAtm"; Atm.Parent = Lighting end
             Atm.Density = Vars.AtmDensity; Atm.Haze = Vars.AtmHaze
             Atm.Glare = Vars.AtmGlare; Atm.Color = Vars.AtmColor; Atm.Decay = Vars.AtmDecay
         elseif Atm then Atm:Destroy(); Atm = nil end
         if Vars.Bloom then
-            if not (BloomFx and BloomFx.Parent) then
-                BloomFx = Instance.new("BloomEffect"); BloomFx.Name = "SigmaBloom"; BloomFx.Parent = Lighting
-            end
+            if not (BloomFx and BloomFx.Parent) then BloomFx = Instance.new("BloomEffect"); BloomFx.Name = "SigmaBloom"; BloomFx.Parent = Lighting end
             BloomFx.Intensity = Vars.BloomIntensity
         elseif BloomFx then BloomFx:Destroy(); BloomFx = nil end
         if Vars.ColorCorrection then
-            if not (CCFx and CCFx.Parent) then
-                CCFx = Instance.new("ColorCorrectionEffect"); CCFx.Name = "SigmaCC"; CCFx.Parent = Lighting
-            end
+            if not (CCFx and CCFx.Parent) then CCFx = Instance.new("ColorCorrectionEffect"); CCFx.Name = "SigmaCC"; CCFx.Parent = Lighting end
             CCFx.Saturation = Vars.Saturation; CCFx.Contrast = Vars.Contrast; CCFx.TintColor = Vars.CCTint
         elseif CCFx then CCFx:Destroy(); CCFx = nil end
-        if Vars.FovChanger then Cam.FieldOfView = Vars.FovValue end
+        if Vars.FovChanger then Cam.FieldOfView = Vars.FovValue
+        else Cam.FieldOfView = 70 end
     end)
 end)
 
--- ============================================================
 -- OPTIMIZATION
--- ============================================================
 local RemovedParticles, RemovedPostFX, OriginalWater = {}, {}, {}
-
 function ApplyOptimization()
     if Vars.OptNoShadows then
         Lighting.GlobalShadows = false
@@ -654,8 +753,7 @@ function ApplyOptimization()
     end
     if Vars.OptNoParticles then
         for _, p in ipairs(workspace:GetDescendants()) do
-            if p:IsA("ParticleEmitter") or p:IsA("Smoke") or p:IsA("Fire")
-               or p:IsA("Sparkles") or p:IsA("Beam") or p:IsA("Trail") then
+            if p:IsA("ParticleEmitter") or p:IsA("Smoke") or p:IsA("Fire") or p:IsA("Sparkles") or p:IsA("Beam") or p:IsA("Trail") then
                 if p.Enabled then p.Enabled = false; table.insert(RemovedParticles, p) end
             end
         end
@@ -708,13 +806,10 @@ function RestoreGraphics()
     pcall(function() Library:Notify("Graphics restored", 3) end)
 end
 
--- ============================================================
 -- ESP
--- ============================================================
 ESP_Data = ESP_Data or {}
-
 function MakeESP(p)
-    if p == LP then return end
+    if not p or p == LP then return end
     if ESP_Data[p] then for _, d in pairs(ESP_Data[p]) do pcall(function() d:Remove() end) end end
     local ok, data = pcall(function()
         return {
@@ -731,19 +826,19 @@ function MakeESP(p)
     end)
     ESP_Data[p] = data
 end
-
 local function RemoveESP(p)
     if ESP_Data[p] then for _, d in pairs(ESP_Data[p]) do pcall(function() d:Remove() end) end; ESP_Data[p] = nil end
 end
-
 for _, p in ipairs(Players:GetPlayers()) do pcall(MakeESP, p) end
 Players.PlayerAdded:Connect(function(p) pcall(MakeESP, p) end)
 Players.PlayerRemoving:Connect(RemoveESP)
 
 RunService.RenderStepped:Connect(function()
     pcall(function()
+        for _, p in ipairs(Players:GetPlayers()) do
+            if p ~= LP and p.Character and not ESP_Data[p] then MakeESP(p) end
+        end
         local myRoot = LP.Character and LP.Character:FindFirstChild("HumanoidRootPart")
-        local maxDist = Vars.ESPMaxDistance
         for p, data in pairs(ESP_Data) do
             local hide = not p.Character or not p.Character:FindFirstChild("HumanoidRootPart") or not myRoot
             if not hide and Vars.ESPTeamCheck and p.Team == LP.Team then hide = true end
@@ -755,7 +850,7 @@ RunService.RenderStepped:Connect(function()
                 local hum = p.Character:FindFirstChildOfClass("Humanoid")
                 local head = p.Character:FindFirstChild("Head") or root
                 local distStuds = (myRoot.Position - root.Position).Magnitude
-                if distStuds > maxDist then
+                if distStuds > Vars.ESPMaxDistance then
                     data.box.Visible=false; data.name.Visible=false
                     data.dist.Visible=false; data.health.Visible=false
                 else
@@ -788,9 +883,7 @@ RunService.RenderStepped:Connect(function()
                             data.health.Color = Color3.fromRGB(255*(1-hp), 255*hp, 0)
                             data.health.Size = Vector2.new(3, height*hp)
                             data.health.Position = Vector2.new(boxPos.X - 6, boxPos.Y + height*(1-hp))
-                        else
-                            data.health.Visible = false
-                        end
+                        else data.health.Visible = false end
                     end
                 end
             end
@@ -798,67 +891,66 @@ RunService.RenderStepped:Connect(function()
     end)
 end)
 
--- ============================================================
 -- CHAMS
--- ============================================================
 local chams = {}
-
 local function ApplyChams(p)
     if p == LP or not p.Character then return end
     if chams[p] then pcall(function() chams[p]:Destroy() end) end
     local ok, hl = pcall(function()
         local h = Instance.new("Highlight")
         h.Name = "SigmaChams"
-        h.FillColor = Vars.ChamsFill
-        h.OutlineColor = Vars.ChamsOutline
-        h.FillTransparency = Vars.ChamsTransparency
-        h.OutlineTransparency = 0
+        h.FillColor = Vars.ChamsFill; h.OutlineColor = Vars.ChamsOutline
+        h.FillTransparency = Vars.ChamsTransparency; h.OutlineTransparency = 0
         h.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
         h.Parent = p.Character
         return h
     end)
     if ok then chams[p] = hl end
 end
-
 local function RemoveChams(p)
     if chams[p] then pcall(function() chams[p]:Destroy() end); chams[p] = nil end
 end
-
 RunService.Heartbeat:Connect(function()
     pcall(function()
         local myRoot = LP.Character and LP.Character:FindFirstChild("HumanoidRootPart")
-        local maxDist = Vars.ChamsMaxDistance
         for _, p in ipairs(Players:GetPlayers()) do
             if p == LP then continue end
             local show = Vars.ChamsEnabled and p.Character and myRoot
             if show and Vars.ChamsTeamCheck and p.Team == LP.Team then show = false end
             if show then
                 local root = p.Character:FindFirstChild("HumanoidRootPart")
-                if not root or (myRoot.Position - root.Position).Magnitude > maxDist then show = false end
+                if not root or (myRoot.Position - root.Position).Magnitude > Vars.ChamsMaxDistance then show = false end
             end
             if show then
                 if not chams[p] or not chams[p].Parent then ApplyChams(p) end
                 if chams[p] then
                     chams[p].FillTransparency = Vars.ChamsTransparency
                     chams[p].OutlineColor = Vars.ChamsOutline
-                    if Vars.ChamsRainbow then
-                        chams[p].FillColor = Color3.fromHSV((tick()*0.5)%1,1,1)
-                    else
-                        chams[p].FillColor = Vars.ChamsFill
-                    end
+                    if Vars.ChamsRainbow then chams[p].FillColor = Color3.fromHSV((tick()*0.5)%1,1,1)
+                    else chams[p].FillColor = Vars.ChamsFill end
                 end
-            elseif chams[p] then
-                RemoveChams(p)
-            end
+            elseif chams[p] then RemoveChams(p) end
         end
     end)
 end)
-
 Players.PlayerRemoving:Connect(RemoveChams)
+
+-- AUTO REAPPLY
+local function OnCharAdded(ch)
+    task.wait(1)
+    if Vars.HitSoundEnabled then ApplyHitSoundToChar(ch) end
+    ch.ChildAdded:Connect(function(c)
+        if Vars.HitSoundEnabled and c:IsA("Tool") then
+            task.delay(0.3, function() ApplyHitSoundToTool(c) end)
+        end
+    end)
+end
+if LP.Character then OnCharAdded(LP.Character) end
+LP.CharacterAdded:Connect(OnCharAdded)
 
 task.spawn(function()
     task.wait(1)
-    pcall(function() Library:Notify("Sigma Universal v2.5 loaded!", 5) end)
+    pcall(function() Library:Notify("Sigma Universal v2.8 loaded!", 5) end)
 end)
-print("=== Sigma Universal v2.5 READY ===")
+print("=== Sigma Universal v2.8 READY ===")
 print("Author: @sigmatop1jj")
