@@ -1,4 +1,4 @@
--- Sigma Universal v5.1
+-- Sigma Universal v5.2
 -- by @sigmatop1jj | t.me/megaswitifox
 
 if getgenv().SigmaLoaded then warn("Sigma already loaded!") return end
@@ -9,7 +9,7 @@ local Library = loadstring(game:HttpGet(repo .. "Library.lua"))()
 
 local Window = Library:CreateWindow({
     Title = "Sigma Universal",
-    Footer = "by @sigmatop1jj | t.me/megaswitifox | v5.1",
+    Footer = "by @sigmatop1jj | t.me/megaswitifox | v5.2",
     Center = true, AutoShow = true, Resizable = true,
 })
 
@@ -25,6 +25,7 @@ local Debris = game:GetService("Debris")
 local LP = Players.LocalPlayer
 local Cam = workspace.CurrentCamera
 local VEC0 = Vector3.new(0, 0, 0)
+local SavedFOV = Cam.FieldOfView  -- 🔥 запоминаем оригинальный FOV
 
 local keyStates, mouseStates = {}, {}
 UIS.InputBegan:Connect(function(input)
@@ -448,6 +449,9 @@ SG:AddButton("Unload", function()
         end
     end)
     pcall(function()
+        if Cam then Cam.FieldOfView = SavedFOV end
+    end)
+    pcall(function()
         local cg = game:GetService("CoreGui")
         for _, n in ipairs({"SigmaWatermark", "SigmaStats", "SigmaHitLogs", "SigmaTargetHUD"}) do
             local o = cg:FindFirstChild(n)
@@ -458,7 +462,7 @@ SG:AddButton("Unload", function()
 end)
 
 local CreditGroup = Settings:AddRightGroupbox("Credits")
-CreditGroup:AddLabel("Script: Sigma Universal v5.1")
+CreditGroup:AddLabel("Script: Sigma Universal v5.2")
 CreditGroup:AddLabel("Author: @sigmatop1jj")
 CreditGroup:AddLabel("Telegram: @megaswitifox")
 CreditGroup:AddDivider()
@@ -484,7 +488,7 @@ watermark.TextSize = 14
 watermark.TextColor3 = Color3.fromRGB(180, 100, 255)
 watermark.TextStrokeTransparency = 0.5
 watermark.TextXAlignment = Enum.TextXAlignment.Right
-watermark.Text = "Sigma v5.1 | @sigmatop1jj | t.me/megaswitifox"
+watermark.Text = "Sigma v5.2 | @sigmatop1jj | t.me/megaswitifox"
 watermark.Visible = false
 watermark.Parent = watermarkGui
 
@@ -509,10 +513,7 @@ statsFrame.Position = UDim2.new(0, 10, 0, 10)
 statsFrame.Visible = false
 statsFrame.Parent = statsGui
 
-local statsCorner = Instance.new("UICorner")
-statsCorner.CornerRadius = UDim.new(0, 6)
-statsCorner.Parent = statsFrame
-
+Instance.new("UICorner", statsFrame).CornerRadius = UDim.new(0, 6)
 local statsStroke = Instance.new("UIStroke")
 statsStroke.Color = Color3.fromRGB(180, 100, 255)
 statsStroke.Thickness = 1
@@ -527,10 +528,7 @@ statsTitle.TextSize = 12
 statsTitle.TextColor3 = Color3.fromRGB(180, 100, 255)
 statsTitle.Text = "⚡ SIGMA STATS"
 statsTitle.Parent = statsFrame
-
-local statsTitleCorner = Instance.new("UICorner")
-statsTitleCorner.CornerRadius = UDim.new(0, 6)
-statsTitleCorner.Parent = statsTitle
+Instance.new("UICorner", statsTitle).CornerRadius = UDim.new(0, 6)
 
 local statsLabel = Instance.new("TextLabel")
 statsLabel.Size = UDim2.new(1, -12, 1, -28)
@@ -1474,7 +1472,7 @@ RunService.Heartbeat:Connect(function()
     end)
 end)
 
--- BHOP SPEED (via JumpRequest)
+-- BHOP SPEED
 UIS.JumpRequest:Connect(function()
     if not Vars.BhopSpeedEnabled then return end
     Vars.BhopCurrentSpeed = math.min(Vars.BhopCurrentSpeed + Vars.BhopSpeedBoost, Vars.BhopMaxSpeed)
@@ -1560,6 +1558,15 @@ task.spawn(function()
                 end
             end)
         end
+        if Toggles and Toggles.FovChanger then
+            Toggles.FovChanger:OnChanged(function(v)
+                if not v then
+                    if Cam then Cam.FieldOfView = SavedFOV end
+                else
+                    if Cam then SavedFOV = Cam.FieldOfView end
+                end
+            end)
+        end
     end)
 end)
 
@@ -1610,8 +1617,10 @@ RunService.Heartbeat:Connect(function()
             if not (CCFx and CCFx.Parent) then CCFx = Instance.new("ColorCorrectionEffect"); CCFx.Name = "SigmaCC"; CCFx.Parent = Lighting end
             CCFx.Saturation = Vars.Saturation; CCFx.Contrast = Vars.Contrast; CCFx.TintColor = Vars.CCTint
         elseif CCFx then CCFx:Destroy(); CCFx = nil end
-        if Vars.FovChanger then Cam.FieldOfView = math.clamp(Vars.FovValue or 70, 1, 240)
-        else Cam.FieldOfView = 70 end
+        -- 🔥 FIX: НЕ трогаем FOV если FovChanger выключен (ADS работает)
+        if Vars.FovChanger then
+            Cam.FieldOfView = math.clamp(Vars.FovValue or 70, 1, 240)
+        end
     end)
 end)
 
@@ -1917,7 +1926,7 @@ end)
 
 task.spawn(function()
     task.wait(1)
-    pcall(function() Library:Notify("Sigma Universal v5.1 loaded! | t.me/megaswitifox", 5) end)
+    pcall(function() Library:Notify("Sigma Universal v5.2 loaded! | t.me/megaswitifox", 5) end)
 end)
-print("=== Sigma Universal v5.1 READY ===")
+print("=== Sigma Universal v5.2 READY ===")
 print("Author: @sigmatop1jj | t.me/megaswitifox")
