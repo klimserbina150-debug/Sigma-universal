@@ -1,4 +1,4 @@
--- Sigma Universal v5.3 (with Cosmetics)
+-- Sigma Universal v5.4 (no hat, no shoot sound, +PlayerList, +Fly Methods)
 -- by @sigmatop1jj | t.me/megaswitifox
 
 if getgenv().SigmaLoaded then warn("Sigma already loaded!") return end
@@ -9,7 +9,7 @@ local Library = loadstring(game:HttpGet(repo .. "Library.lua"))()
 
 local Window = Library:CreateWindow({
     Title = "Sigma Universal",
-    Footer = "by @sigmatop1jj | t.me/megaswitifox | v5.3",
+    Footer = "by @sigmatop1jj | t.me/megaswitifox | v5.4",
     Center = true, AutoShow = true, Resizable = true,
 })
 
@@ -22,7 +22,6 @@ local UIS = game:GetService("UserInputService")
 local Lighting = game:GetService("Lighting")
 local TweenService = game:GetService("TweenService")
 local Debris = game:GetService("Debris")
-local ContentProvider = game:GetService("ContentProvider")
 local LP = Players.LocalPlayer
 local Cam = workspace.CurrentCamera
 local VEC0 = Vector3.new(0, 0, 0)
@@ -77,7 +76,6 @@ local Vars = {
     DamageFXLifetime=0.8, DamageFXRainbow=false,
     TargetHUDEnabled=false,
     HitSoundEnabled=false, HitSoundChoice="None", HitSoundVolume=1,
-    CustomShootSoundEnabled=false, CustomShootSoundChoice="None", CustomShootSoundVolume=5,
     Fullbright=false, Brightness=2, NoFog=false, NoShadows=false,
     FovChanger=false, FovValue=70,
     Bloom=false, BloomIntensity=0.7, ColorCorrection=false,
@@ -93,7 +91,8 @@ local Vars = {
     AntiAimEnabled=false, AntiAimPitch=-45,
     Bunnyhop=false, BhopSpeedEnabled=false, BhopSpeedBoost=2, BhopMaxSpeed=50, BhopCurrentSpeed=16,
     Speedhack=false, SpeedValue=24,
-    Fly=false, FlySpeed=50, Spinbot=false, SpinSpeed=15,
+    Fly=false, FlySpeed=50, FlyMethod="Velocity (Aggressive)", FlyBodyVel=nil, FlyBodyGyro=nil,
+    Spinbot=false, SpinSpeed=15,
     SpiderEnabled=false, SpiderSpeed=50, NoclipEnabled=false,
     ThirdPersonEnabled=false, ThirdPersonDistance=10, ThirdPersonHeight=0,
     TimeChanger=false, TimeValue=12, AmbientOverride=false,
@@ -104,10 +103,7 @@ local Vars = {
     OptNoWaterWaves=true, OptNoTextures=false, OptQuality=1,
     StatsEnabled=false, StatsPosition="TopLeft", StatsRainbow=false,
     StatsShowFPS=true, StatsShowPing=true, StatsShowMemory=true, StatsShowTime=false,
-    -- Cosmetics
-    HatEnabled=false, HatStyle="Classic", HatTransparency=0.3,
-    HatRainbow=false, HatRainbowSpeed=5, HatColor=Color3.fromRGB(0,255,255),
-    HatRadius=2.4, HatHeight=1.6, HatReflectance=0, HatSides=25,
+    PlayerListEnabled=false,
     FFEnabled=false, FFRainbow=false, FFColor=Color3.fromRGB(128,128,128),
     ClassicAuraEnabled=false, ClassicAuraList={},
     ParticleAuraEnabled=false, ParticleAuraColor=Color3.fromRGB(133,220,255),
@@ -137,20 +133,9 @@ local HSList = {
     ["Sparkle"]="rbxassetid://78601008552434", ["Aray Ko"]="rbxassetid://122864243311961",
     ["Hehe"]="rbxassetid://18381322350",
 }
-local ShootSoundList = {
-    ["None"]="", ["Osu"]="rbxassetid://7172607676", ["Pop"]="rbxassetid://9125402735",
-    ["MLG"]="rbxassetid://109817519733426", ["Ouch"]="rbxassetid://136844926219636",
-    ["Fire"]="rbxassetid://130412184952886", ["Bonk"]="rbxassetid://5682262154",
-    ["Bell"]="rbxassetid://131573697", ["Rust"]="rbxassetid://5043539486",
-    ["Metal"]="rbxassetid://8917041751", ["Skeet"]="rbxassetid://83717596220569",
-    ["Quack"]="rbxassetid://6435400690", ["Katana"]="rbxassetid://7122613461",
-    ["Neverlose"]="rbxassetid://18391691942", ["Undertale"]="rbxassetid://1471213022",
-    ["TF2 Critical"]="rbxassetid://8255306220", ["TF2 Frying Pan"]="rbxassetid://18922477538",
-}
-local HSNames, ShootSoundNames = {}, {}
+local HSNames = {}
 for k in pairs(HSList) do table.insert(HSNames, k) end
-for k in pairs(ShootSoundList) do table.insert(ShootSoundNames, k) end
-table.sort(HSNames); table.sort(ShootSoundNames)
+table.sort(HSNames)
 
 local AuraModels = {'Godly', 'Super Sayien', 'North Star', 'Blue Lord', 'Pink Aura', 'Angel Wing', 'Sweet Heart', 'Ethereal Aura'}
 local AuraModelIDs = {
@@ -308,10 +293,6 @@ local SG2 = Visuals:AddRightGroupbox("Sounds")
 T(SG2,"HitSoundEnabled","Hit Sound",false)
 SG2:AddDropdown("HitSoundChoice", { Text="Hit Sound", Values=HSNames, Default="None", Callback=function(v) Vars.HitSoundChoice = v end })
 S(SG2,"HitSoundVolume","Hit Volume",1,0,10,1)
-SG2:AddDivider()
-T(SG2,"CustomShootSoundEnabled","Custom Shoot Sound",false)
-SG2:AddDropdown("CustomShootSoundChoice", { Text="Shoot Sound", Values=ShootSoundNames, Default="None", Callback=function(v) Vars.CustomShootSoundChoice = v end })
-S(SG2,"CustomShootSoundVolume","Shoot Volume",5,0,10,1)
 
 local VG2 = Visuals:AddRightGroupbox("Camera")
 T(VG2,"FovChanger","FOV Changer",false); S(VG2,"FovValue","FOV (50-240)",70,50,240,0)
@@ -343,6 +324,9 @@ T(SKG,"SkeletonEnabled","Enable Skeleton",false); T(SKG,"SkeletonTeamCheck","Tea
 S(SKG,"SkeletonMaxDistance","Max Distance",1000,0,10000,0)
 S(SKG,"SkeletonThickness","Thickness",1.5,0.5,5,1); C(SKG,"SkeletonColor","Color",Color3.fromRGB(255,255,255))
 
+local PLG = ESPTab:AddRightGroupbox("Player List")
+T(PLG,"PlayerListEnabled","Enable Player List",false)
+
 local EG2 = ESPTab:AddRightGroupbox("Chams")
 T(EG2,"ChamsEnabled","Enable Chams",false); T(EG2,"ChamsTeamCheck","Team Check",true)
 S(EG2,"ChamsTransparency","Fill Transparency",0.5,0,1,2); S(EG2,"ChamsMaxDistance","Max Distance",1500,0,10000,0)
@@ -350,15 +334,6 @@ C(EG2,"ChamsFill","Fill Color",Color3.fromRGB(255,0,0)); C(EG2,"ChamsOutline","O
 T(EG2,"ChamsRainbow","Rainbow Fill",false)
 
 -- COSMETICS
-local HatBox = Cosmetics:AddLeftGroupbox("Chinese Hat")
-T(HatBox,"HatEnabled","Enable Hat",false)
-HatBox:AddDropdown("HatStyle", { Text = "Style", Values = {"Classic", "Drawing"}, Default = "Classic", Callback = function(v) Vars.HatStyle = v; if Vars.HatEnabled then Hat_ToggleEnabled(false); task.wait(0.1); Hat_ToggleEnabled(true) end end })
-T(HatBox,"HatRainbow","Rainbow Mode",false); S(HatBox,"HatRainbowSpeed","Rainbow Speed",5,1,20,0)
-S(HatBox,"HatTransparency","Transparency",0.3,0,1,2); S(HatBox,"HatRadius","Radius",2.4,0.5,10,1)
-S(HatBox,"HatHeight","Height",1.6,0.5,5,1); S(HatBox,"HatReflectance","Reflectance",0,0,1,2)
-S(HatBox,"HatSides","Sides (Drawing)",25,3,300,0)
-C(HatBox,"HatColor","Hat Color",Color3.fromRGB(0,255,255))
-
 local FFBox = Cosmetics:AddLeftGroupbox("Skin Material (ForceField)")
 T(FFBox,"FFEnabled","Enable ForceField",false); T(FFBox,"FFRainbow","Rainbow Mode",false)
 C(FFBox,"FFColor","Color",Color3.fromRGB(128,128,128))
@@ -376,6 +351,12 @@ PABox:AddDropdown("ParticleAuraDropdown", { Text = "Select Auras", Values = PART
 local MG = Movement:AddLeftGroupbox("Movement")
 T(MG,"Bunnyhop","Bunnyhop",false); T(MG,"Speedhack","Speedhack",false)
 S(MG,"SpeedValue","Speed",24,16,200,0); T(MG,"Fly","Fly",false); S(MG,"FlySpeed","Fly Speed",50,10,300,0)
+MG:AddDropdown("FlyMethod", {
+    Text = "Fly Method",
+    Values = {"Velocity (Aggressive)", "BodyVelocity (Classic)", "CFrame (Direct)"},
+    Default = "Velocity (Aggressive)",
+    Callback = function(v) Vars.FlyMethod = v; if ResetFly then ResetFly() end end,
+})
 local BG = Movement:AddLeftGroupbox("Bhop Speed")
 T(BG,"BhopSpeedEnabled","Bhop Speed Boost",false); S(BG,"BhopSpeedBoost","Speed per Jump",2,0.5,10,1)
 S(BG,"BhopMaxSpeed","Max Speed",50,16,200,0)
@@ -418,7 +399,7 @@ SG:AddButton("Unload", function()
     pcall(function() if Cam then Cam.FieldOfView = SavedFOV end end)
     pcall(function()
         local cg = game:GetService("CoreGui")
-        for _, n in ipairs({"SigmaWatermark", "SigmaStats", "SigmaHitLogs", "SigmaTargetHUD"}) do
+        for _, n in ipairs({"SigmaWatermark", "SigmaStats", "SigmaHitLogs", "SigmaTargetHUD", "SigmaPlayerList"}) do
             local o = cg:FindFirstChild(n)
             if o then o:Destroy() end
         end
@@ -426,7 +407,7 @@ SG:AddButton("Unload", function()
     pcall(function() Library:Unload() end)
 end)
 local CreditGroup = Settings:AddRightGroupbox("Credits")
-CreditGroup:AddLabel("Script: Sigma Universal v5.3")
+CreditGroup:AddLabel("Script: Sigma Universal v5.4")
 CreditGroup:AddLabel("Author: @sigmatop1jj")
 CreditGroup:AddLabel("Telegram: @megaswitifox")
 CreditGroup:AddDivider()
@@ -445,7 +426,7 @@ watermark.Size = UDim2.new(0, 500, 0, 25); watermark.Position = UDim2.new(1, -51
 watermark.BackgroundTransparency = 1; watermark.Font = Enum.Font.GothamBold
 watermark.TextSize = 14; watermark.TextColor3 = Color3.fromRGB(180, 100, 255)
 watermark.TextStrokeTransparency = 0.5; watermark.TextXAlignment = Enum.TextXAlignment.Right
-watermark.Text = "Sigma v5.3 | @sigmatop1jj | t.me/megaswitifox"; watermark.Visible = false
+watermark.Text = "Sigma v5.4 | @sigmatop1jj | t.me/megaswitifox"; watermark.Visible = false
 watermark.Parent = watermarkGui
 local watermarkRainbow, watermarkElapsed = false, 0-- === STATS ===
 local statsGui = Instance.new("ScreenGui")
@@ -517,7 +498,7 @@ CustomGroup:AddDropdown("UIFont", {
         local fontEnum = Enum.Font[fontName]; if not fontEnum then return end
         local cg = game:GetService("CoreGui")
         for _, gui in ipairs(cg:GetChildren()) do
-            if gui:IsA("ScreenGui") and not gui.Name:match("^Sigma(Watermark|Stats|HitLogs|TargetHUD)$") then
+            if gui:IsA("ScreenGui") and not gui.Name:match("^Sigma") then
                 local isOurs = false
                 for _, obj in ipairs(gui:GetDescendants()) do
                     if obj:IsA("TextLabel") and obj.Text == "Sigma Universal" then isOurs = true; break end
@@ -536,7 +517,7 @@ CustomGroup:AddSlider("UIScaleSlider", {
     Callback = function(scale)
         local cg = game:GetService("CoreGui")
         for _, gui in ipairs(cg:GetChildren()) do
-            if gui:IsA("ScreenGui") and not gui.Name:match("^Sigma(Watermark|Stats|HitLogs|TargetHUD)$") then
+            if gui:IsA("ScreenGui") and not gui.Name:match("^Sigma") then
                 local isOurs = false
                 for _, obj in ipairs(gui:GetDescendants()) do
                     if obj:IsA("TextLabel") and obj.Text == "Sigma Universal" then isOurs = true; break end
@@ -592,7 +573,7 @@ hitLogsHolder.AnchorPoint = Vector2.new(0.5,0); hitLogsHolder.Position = UDim2.n
 hitLogsHolder.Parent = hitLogsGui
 local hitLogsLayout = Instance.new("UIListLayout")
 hitLogsLayout.SortOrder = Enum.SortOrder.LayoutOrder; hitLogsLayout.Parent = hitLogsHolder
-local function ApplyHitLogsPos()
+function ApplyHitLogsPos()
     if Vars.HitLogsPosition == "Center" then hitLogsHolder.AnchorPoint = Vector2.new(0.5,0); hitLogsHolder.Position = UDim2.new(0.5,0,0.62,0)
     elseif Vars.HitLogsPosition == "Left" then hitLogsHolder.AnchorPoint = Vector2.new(0,0.5); hitLogsHolder.Position = UDim2.new(0,18,0.5,0)
     elseif Vars.HitLogsPosition == "Top" then hitLogsHolder.AnchorPoint = Vector2.new(0.5,0); hitLogsHolder.Position = UDim2.new(0.5,0,0,78)
@@ -663,105 +644,118 @@ thHpGrad.Color = ColorSequence.new{ColorSequenceKeypoint.new(0, Color3.fromRGB(2
 thHpGrad.Parent = thHpFill
 local lastTargetHUD, chams = 0, {}
 
--- === COSMETICS: HAT ===
-local hatDrawings, hatConnection = {}, nil
-local tau = math.pi * 2
-local function RebuildHatDrawings(sides)
-    for i = 1, #hatDrawings do
-        pcall(function() hatDrawings[i][1]:Remove() end)
-        pcall(function() hatDrawings[i][2]:Remove() end)
+-- === PLAYER LIST GUI ===
+local plGui = Instance.new("ScreenGui")
+plGui.Name = "SigmaPlayerList"; plGui.ResetOnSpawn = false
+plGui.IgnoreGuiInset = true; plGui.DisplayOrder = 9997
+pcall(function() plGui.Parent = game:GetService("CoreGui") end)
+if not plGui.Parent then plGui.Parent = LP:WaitForChild("PlayerGui") end
+plGui.Enabled = false
+local plFrame = Instance.new("Frame")
+plFrame.Size = UDim2.new(0,220,0,400); plFrame.Position = UDim2.new(0,10,0.3,0)
+plFrame.BackgroundColor3 = Color3.fromRGB(20,20,25); plFrame.BackgroundTransparency = 0.15
+plFrame.BorderSizePixel = 0; plFrame.Active = true; plFrame.Draggable = true
+plFrame.Parent = plGui
+Instance.new("UICorner", plFrame).CornerRadius = UDim.new(0,8)
+local plStroke = Instance.new("UIStroke")
+plStroke.Color = Color3.fromRGB(180,100,255); plStroke.Thickness = 1; plStroke.Parent = plFrame
+local plTitle = Instance.new("TextLabel")
+plTitle.Size = UDim2.new(1,0,0,28); plTitle.BackgroundColor3 = Color3.fromRGB(30,30,38)
+plTitle.BorderSizePixel = 0; plTitle.Font = Enum.Font.GothamBold; plTitle.TextSize = 13
+plTitle.TextColor3 = Color3.fromRGB(180,100,255); plTitle.Text = "⚡ PLAYERS"; plTitle.Parent = plFrame
+Instance.new("UICorner", plTitle).CornerRadius = UDim.new(0,8)
+local plScroll = Instance.new("ScrollingFrame")
+plScroll.Size = UDim2.new(1,-8,1,-36); plScroll.Position = UDim2.new(0,4,0,32)
+plScroll.BackgroundTransparency = 1; plScroll.BorderSizePixel = 0
+plScroll.ScrollBarThickness = 4; plScroll.ScrollBarImageColor3 = Color3.fromRGB(180,100,255)
+plScroll.CanvasSize = UDim2.new(0,0,0,0); plScroll.Parent = plFrame
+local plLayout = Instance.new("UIListLayout")
+plLayout.Padding = UDim.new(0,4); plLayout.SortOrder = Enum.SortOrder.LayoutOrder; plLayout.Parent = plScroll
+local plRows = {}
+local function RebuildPlayerList()
+    for _, row in pairs(plRows) do if row.Frame then pcall(function() row.Frame:Destroy() end) end end
+    plRows = {}
+    local players = {}
+    for _, p in ipairs(Players:GetPlayers()) do if p ~= LP then table.insert(players, p) end end
+    local myRoot = LP.Character and LP.Character:FindFirstChild("HumanoidRootPart")
+    if myRoot then
+        table.sort(players, function(a, b)
+            local aD = a.Character and a.Character:FindFirstChild("HumanoidRootPart") and (a.Character.HumanoidRootPart.Position - myRoot.Position).Magnitude or math.huge
+            local bD = b.Character and b.Character:FindFirstChild("HumanoidRootPart") and (b.Character.HumanoidRootPart.Position - myRoot.Position).Magnitude or math.huge
+            return aD < bD
+        end)
     end
-    hatDrawings = {}
-    for i = 1, sides do
-        hatDrawings[i] = {Drawing.new('Line'), Drawing.new('Triangle')}
-        hatDrawings[i][1].ZIndex = 2; hatDrawings[i][1].Thickness = 2
-        hatDrawings[i][2].ZIndex = 1; hatDrawings[i][2].Filled = true
+    for i, p in ipairs(players) do
+        local row = Instance.new("Frame")
+        row.Size = UDim2.new(1,0,0,44); row.BackgroundColor3 = Color3.fromRGB(35,35,45)
+        row.BorderSizePixel = 0; row.LayoutOrder = i; row.Parent = plScroll
+        Instance.new("UICorner", row).CornerRadius = UDim.new(0,5)
+        local nameLbl = Instance.new("TextLabel")
+        nameLbl.Size = UDim2.new(1,-70,0,18); nameLbl.Position = UDim2.new(0,5,0,3)
+        nameLbl.BackgroundTransparency = 1; nameLbl.Font = Enum.Font.GothamBold; nameLbl.TextSize = 12
+        nameLbl.TextColor3 = Color3.new(1,1,1); nameLbl.TextXAlignment = Enum.TextXAlignment.Left
+        nameLbl.Text = p.Name; nameLbl.TextTruncate = Enum.TextTruncate.AtEnd; nameLbl.Parent = row
+        local distLbl = Instance.new("TextLabel")
+        distLbl.Size = UDim2.new(0,60,0,14); distLbl.Position = UDim2.new(1,-65,0,4)
+        distLbl.BackgroundTransparency = 1; distLbl.Font = Enum.Font.Gotham; distLbl.TextSize = 11
+        distLbl.TextColor3 = Color3.fromRGB(200,200,200); distLbl.TextXAlignment = Enum.TextXAlignment.Right
+        distLbl.Text = "0m"; distLbl.Parent = row
+        local hpBg = Instance.new("Frame")
+        hpBg.Size = UDim2.new(1,-10,0,12); hpBg.Position = UDim2.new(0,5,0,26)
+        hpBg.BackgroundColor3 = Color3.fromRGB(15,15,15); hpBg.BorderSizePixel = 0; hpBg.Parent = row
+        Instance.new("UICorner", hpBg).CornerRadius = UDim.new(0,3)
+        local hpFill = Instance.new("Frame")
+        hpFill.Size = UDim2.new(1,0,1,0); hpFill.BackgroundColor3 = Color3.fromRGB(0,255,0)
+        hpFill.BorderSizePixel = 0; hpFill.Parent = hpBg
+        Instance.new("UICorner", hpFill).CornerRadius = UDim.new(0,3)
+        plRows[p] = {Frame = row, NameLabel = nameLbl, DistLabel = distLbl, HPFill = hpFill}
     end
+    plScroll.CanvasSize = UDim2.new(0,0,0, plLayout.AbsoluteContentSize.Y + 10)
 end
-RebuildHatDrawings(25)
-local function Hat_RemoveClassic()
-    local char = LP.Character
-    if char and char:FindFirstChild("ChineseHat") then pcall(function() char.ChineseHat:Destroy() end) end
-end
-local function Hat_AddClassic(char)
-    task.wait(0.1); local head = char:WaitForChild("Head",5); if not head then return end
-    Hat_RemoveClassic()
-    local hat = Instance.new("Part"); hat.Name = "ChineseHat"
-    hat.Transparency = Vars.HatTransparency; hat.Color = Vars.HatColor
-    hat.Material = Enum.Material.Neon; hat.CanCollide = false; hat.Reflectance = Vars.HatReflectance
-    local mesh = Instance.new("SpecialMesh"); mesh.MeshId = "rbxassetid://1033714"
-    mesh.Scale = Vector3.new(Vars.HatRadius, Vars.HatHeight, Vars.HatRadius); mesh.Parent = hat
-    local weld = Instance.new("WeldConstraint"); weld.Part0 = head; weld.Part1 = hat; weld.Parent = hat
-    hat.CFrame = head.CFrame * CFrame.new(0,1.1,0); hat.Parent = char
-end
-local function Hat_UpdateClassic()
-    local char = LP.Character; if not char then return end
-    local hat = char:FindFirstChild("ChineseHat")
-    if hat then
-        hat.Transparency = Vars.HatTransparency; hat.Reflectance = Vars.HatReflectance
-        hat.Color = Vars.HatRainbow and Color3.fromHSV(tick() % Vars.HatRainbowSpeed / Vars.HatRainbowSpeed, 1, 1) or Vars.HatColor
-        local mesh = hat:FindFirstChildOfClass("SpecialMesh")
-        if mesh then mesh.Scale = Vector3.new(Vars.HatRadius, Vars.HatHeight, Vars.HatRadius) end
-    end
-end
-local function Hat_UpdateDrawing()
-    local char = LP.Character
-    local pass = Vars.HatEnabled and char and char:FindFirstChild('Head') and (Cam.CFrame.p - Cam.Focus.p).magnitude > 1 and char.Humanoid.Health > 0
-    for i = 1, #hatDrawings do
-        local line, triangle = hatDrawings[i][1], hatDrawings[i][2]
-        if pass then
-            local color = Vars.HatRainbow and Color3.fromHSV((tick() % Vars.HatRainbowSpeed / Vars.HatRainbowSpeed - (i / #hatDrawings)) % 1, 0.5, 1) or Vars.HatColor
-            local pos = char.Head.Position + Vector3.new(0,0.75,0); local topWorld = pos + Vector3.new(0,0.75,0)
-            local last, next = (i / Vars.HatSides) * tau, ((i + 1) / Vars.HatSides) * tau
-            local lastWorld = pos + (Vector3.new(math.cos(last), 0, math.sin(last)) * Vars.HatRadius)
-            local nextWorld = pos + (Vector3.new(math.cos(next), 0, math.sin(next)) * Vars.HatRadius)
-            local lastScreen = Cam:WorldToViewportPoint(lastWorld); local nextScreen = Cam:WorldToViewportPoint(nextWorld)
-            local topScreen = Cam:WorldToViewportPoint(topWorld)
-            line.From = Vector2.new(lastScreen.X, lastScreen.Y); line.To = Vector2.new(nextScreen.X, nextScreen.Y)
-            line.Color = color; line.Transparency = 1 - Vars.HatTransparency; line.Visible = true
-            triangle.PointA = Vector2.new(topScreen.X, topScreen.Y); triangle.PointB = line.From; triangle.PointC = line.To
-            triangle.Color = color; triangle.Transparency = 0.35; triangle.Visible = true
-        else line.Visible = false; triangle.Visible = false end
-    end
-end
-local function Hat_ToggleEnabled(value)
-    Vars.HatEnabled = value
-    if value then
-        if Vars.HatStyle == "Classic" and LP.Character then Hat_AddClassic(LP.Character) end
-        if hatConnection then hatConnection:Disconnect() end
-        hatConnection = RunService.Heartbeat:Connect(function() if Vars.HatStyle == "Classic" then Hat_UpdateClassic() end end)
-    else
-        Hat_RemoveClassic()
-        for i = 1, #hatDrawings do hatDrawings[i][1].Visible = false; hatDrawings[i][2].Visible = false end
-        if hatConnection then hatConnection:Disconnect(); hatConnection = nil end
-    end
-end
-RunService.RenderStepped:Connect(function()
-    if Vars.HatEnabled and Vars.HatStyle == "Drawing" then Hat_UpdateDrawing() end
+RunService.Heartbeat:Connect(function()
+    pcall(function()
+        if not Vars.PlayerListEnabled then plGui.Enabled = false; return end
+        plGui.Enabled = true
+        local myRoot = LP.Character and LP.Character:FindFirstChild("HumanoidRootPart")
+        for p, row in pairs(plRows) do
+            if row.Frame and row.Frame.Parent then
+                if p.Character and p.Character:FindFirstChild("HumanoidRootPart") then
+                    local hum = p.Character:FindFirstChildOfClass("Humanoid")
+                    local hrp = p.Character.HumanoidRootPart
+                    local dist = myRoot and math.floor((myRoot.Position - hrp.Position).Magnitude) or 0
+                    row.DistLabel.Text = dist .. "m"
+                    if hum then
+                        local hp = math.clamp(hum.Health / hum.MaxHealth, 0, 1)
+                        row.HPFill.Size = UDim2.new(hp,0,1,0)
+                        row.HPFill.BackgroundColor3 = Color3.fromRGB(255*(1-hp), 255*hp, 0)
+                    end
+                else row.DistLabel.Text = "dead"; row.HPFill.Size = UDim2.new(0,0,1,0) end
+            end
+        end
+    end)
 end)
+Players.PlayerAdded:Connect(function() task.wait(0.5); pcall(RebuildPlayerList) end)
+Players.PlayerRemoving:Connect(function() task.wait(0.5); pcall(RebuildPlayerList) end)
+task.spawn(function() task.wait(2); pcall(RebuildPlayerList) end)
 
 -- === COSMETICS: FORCEFIELD ===
 local ffOriginalColors, ffConnection = {}, nil
 local function FF_Save(char)
     ffOriginalColors[char] = {}
     for _, part in pairs(char:GetDescendants()) do
-        if part:IsA("BasePart") and part.Name ~= "ChineseHat" then
-            ffOriginalColors[char][part] = { Color = part.Color, Material = part.Material }
-        end
+        if part:IsA("BasePart") then ffOriginalColors[char][part] = { Color = part.Color, Material = part.Material } end
     end
 end
 local function FF_Apply(char)
     FF_Save(char)
     for _, part in pairs(char:GetDescendants()) do
-        if part:IsA("BasePart") and part.Name ~= "ChineseHat" then
-            part.Color = Vars.FFColor; part.Material = Enum.Material.ForceField
-        end
+        if part:IsA("BasePart") then part.Color = Vars.FFColor; part.Material = Enum.Material.ForceField end
     end
 end
 local function FF_Update()
     if LP.Character and Vars.FFEnabled then
         for _, part in pairs(LP.Character:GetDescendants()) do
-            if part:IsA("BasePart") and part.Name ~= "ChineseHat" and part.Material == Enum.Material.ForceField then
+            if part:IsA("BasePart") and part.Material == Enum.Material.ForceField then
                 part.Color = Vars.FFRainbow and Color3.fromHSV(tick() % 5 / 5, 1, 1) or Vars.FFColor
             end
         end
@@ -770,9 +764,7 @@ end
 local function FF_Remove(char)
     if ffOriginalColors[char] then
         for part, data in pairs(ffOriginalColors[char]) do
-            if part and part.Parent and part:IsA("BasePart") then
-                part.Color = data.Color; part.Material = data.Material
-            end
+            if part and part.Parent and part:IsA("BasePart") then part.Color = data.Color; part.Material = data.Material end
         end
         ffOriginalColors[char] = {}
     end
@@ -792,7 +784,10 @@ local function FF_Toggle(value)
 end
 
 -- === COSMETICS: CLASSIC AURA ===
-local function Aura_LoadModel(id) local ok, r = pcall(function() return game:GetObjects(id)[1] end); return ok and r or nil end
+local function Aura_LoadModel(id)
+    local ok, r = pcall(function() return game:GetObjects(id)[1] end)
+    return ok and r or nil
+end
 local function Aura_DisableOne(name)
     if activeClassicAuras[name] then
         for _, v in pairs(activeClassicAuras[name]) do if v and v.Parent then pcall(function() v:Destroy() end) end end
@@ -818,7 +813,7 @@ local function Aura_EnableOne(char, name)
     pcall(function() model:Destroy() end)
     if #effects > 0 then activeClassicAuras[name] = effects end
 end
-local function Aura_RefreshAll()
+function Aura_RefreshAll()
     local char = LP.Character; if not char then return end
     for _, name in ipairs(AuraModels) do Aura_DisableOne(name) end
     if not Vars.ClassicAuraEnabled then return end
@@ -831,7 +826,8 @@ end
 
 -- === COSMETICS: PARTICLE AURA ===
 local function MapParts(char)
-    local parts = {}; for _, c in ipairs(char:GetChildren()) do if c:IsA("BasePart") then parts[c.Name] = c end end
+    local parts = {}
+    for _, c in ipairs(char:GetChildren()) do if c:IsA("BasePart") then parts[c.Name] = c end end
     return parts
 end
 local function GetParticleTemplate(name)
@@ -860,16 +856,16 @@ local function ApplyParticleAura(char, name, color)
                 pcall(function()
                     local inst = child:Clone(); inst.Name = "SigmaParticleAura"; inst.Parent = target
                     if color then TintSubtree(inst, color) end
+                    if inst:IsA("ParticleEmitter") then inst.Enabled = true end
+                    for _, d in ipairs(inst:GetDescendants()) do
+                        if d:IsA("ParticleEmitter") then d.Enabled = true end
+                    end
                     table.insert(created, inst)
                 end)
             end
         end
     end
     pcall(function() cloned:Destroy() end)
-    for _, p in ipairs(created) do
-        pcall(function() if p:IsA("ParticleEmitter") then p.Enabled = true end end)
-        for _, d in ipairs(p:GetDescendants()) do pcall(function() if d:IsA("ParticleEmitter") then d.Enabled = true end end) end
-    end
     return created
 end
 local function PA_DisableOne(name)
@@ -878,7 +874,7 @@ local function PA_DisableOne(name)
         activeParticleAuras[name] = nil
     end
 end
-local function PA_RefreshAll()
+function PA_RefreshAll()
     local char = LP.Character; if not char then return end
     for _, name in ipairs(PARTICLE_AURA_NAMES) do PA_DisableOne(name) end
     if not Vars.ParticleAuraEnabled then return end
@@ -892,6 +888,26 @@ local function PA_RefreshAll()
             end
         end
     end
+end
+
+-- === FLY HELPERS ===
+function ResetFly()
+    if Vars.FlyBodyVel then pcall(function() Vars.FlyBodyVel:Destroy() end); Vars.FlyBodyVel = nil end
+    if Vars.FlyBodyGyro then pcall(function() Vars.FlyBodyGyro:Destroy() end); Vars.FlyBodyGyro = nil end
+end
+local function StartBodyVelFly(char)
+    local hrp = char:FindFirstChild("HumanoidRootPart")
+    if not hrp then return end
+    ResetFly()
+    Vars.FlyBodyVel = Instance.new("BodyVelocity")
+    Vars.FlyBodyVel.MaxForce = Vector3.new(1e5, 1e5, 1e5)
+    Vars.FlyBodyVel.Velocity = Vector3.zero
+    Vars.FlyBodyVel.Parent = hrp
+    Vars.FlyBodyGyro = Instance.new("BodyGyro")
+    Vars.FlyBodyGyro.MaxTorque = Vector3.new(1e5, 1e5, 1e5)
+    Vars.FlyBodyGyro.P = 1000
+    Vars.FlyBodyGyro.CFrame = hrp.CFrame
+    Vars.FlyBodyGyro.Parent = hrp
 end
 
 -- === IGNORE / TARGET / VISIBLE ===
@@ -1377,27 +1393,14 @@ end
 for _, p in ipairs(Players:GetPlayers()) do TrackDamageForPlayer(p) end
 Players.PlayerAdded:Connect(TrackDamageForPlayer)
 
--- === CUSTOM SHOOT SOUND ===
-local function PlayShootSound()
-    if not Vars.CustomShootSoundEnabled or Vars.CustomShootSoundChoice == "None" then return end
-    local id = ShootSoundList[Vars.CustomShootSoundChoice] or ""; if id == "" then return end
-    pcall(function()
-        local snd = Instance.new("Sound"); snd.SoundId = id; snd.Volume = Vars.CustomShootSoundVolume
-        snd.Parent = LP.Character; snd:Play(); Debris:AddItem(snd, 3)
-    end)
-end
-local lastShootSoundTime = 0
+-- lastShotTick tracking (для Hit Sound — определяем что стрелял игрок)
 RunService.Heartbeat:Connect(function()
     pcall(function()
-        if not mouseStates.MouseButton1 then return end
-        local char = LP.Character; if not char then return end
-        local tool = char:FindFirstChildOfClass("Tool"); if not tool or not IsGunTool(tool) then return end
-        local fireRate = GetFireRate(tool); local now = tick()
-        if now - lastShootSoundTime >= fireRate then
-            if Vars.CustomShootSoundEnabled then PlayShootSound() end
-            lastShootSoundTime = now
+        if mouseStates.MouseButton1 then
+            local char = LP.Character; if not char then return end
+            local tool = char:FindFirstChildOfClass("Tool"); if not tool or not IsGunTool(tool) then return end
+            lastShotTick = tick()
         end
-        lastShotTick = now
     end)
 end)
 
@@ -1419,7 +1422,7 @@ RunService.RenderStepped:Connect(function()
     end)
 end)
 
--- === MOVEMENT ===
+-- === MOVEMENT (с 3 Fly методами) ===
 RunService.Heartbeat:Connect(function()
     pcall(function()
         local char = LP.Character; if not char or not char:FindFirstChild("HumanoidRootPart") then return end
@@ -1440,7 +1443,21 @@ RunService.Heartbeat:Connect(function()
             if UIS:IsKeyDown(Enum.KeyCode.S) then dir = dir - Cam.CFrame.LookVector end
             if UIS:IsKeyDown(Enum.KeyCode.A) then dir = dir - Cam.CFrame.RightVector end
             if UIS:IsKeyDown(Enum.KeyCode.D) then dir = dir + Cam.CFrame.RightVector end
-            root.Velocity = dir * Vars.FlySpeed + Vector3.new(0,0.5,0)
+            local speed = Vars.FlySpeed; local method = Vars.FlyMethod
+            if method == "Velocity (Aggressive)" then
+                root.Velocity = dir * speed + Vector3.new(0, 0.5, 0)
+            elseif method == "BodyVelocity (Classic)" then
+                if not Vars.FlyBodyVel or not Vars.FlyBodyVel.Parent then StartBodyVelFly(char) end
+                if Vars.FlyBodyVel then
+                    if dir.Magnitude > 0 then Vars.FlyBodyVel.Velocity = dir.Unit * speed
+                    else Vars.FlyBodyVel.Velocity = Vector3.zero end
+                    if Vars.FlyBodyGyro then Vars.FlyBodyGyro.CFrame = Cam.CFrame end
+                end
+            elseif method == "CFrame (Direct)" then
+                if dir.Magnitude > 0 then root.CFrame = root.CFrame + dir.Unit * speed * (1/60) * 3 end
+            end
+        else
+            if Vars.FlyBodyVel or Vars.FlyBodyGyro then ResetFly() end
         end
         if Vars.SpiderEnabled and hum and UIS:IsKeyDown(Enum.KeyCode.W) then
             local rayParams = RaycastParams.new(); rayParams.FilterType = excludeEnum; rayParams.FilterDescendantsInstances = {char}
@@ -1481,8 +1498,6 @@ task.spawn(function()
                 else if Cam then SavedFOV = Cam.FieldOfView end end
             end)
         end
-        -- Cosmetics OnChanged
-        if Toggles and Toggles.HatEnabled then Toggles.HatEnabled:OnChanged(function(v) Hat_ToggleEnabled(v) end) end
         if Toggles and Toggles.FFEnabled then Toggles.FFEnabled:OnChanged(function(v) FF_Toggle(v) end) end
         if Toggles and Toggles.ClassicAuraEnabled then Toggles.ClassicAuraEnabled:OnChanged(function() Aura_RefreshAll() end) end
         if Toggles and Toggles.ParticleAuraEnabled then Toggles.ParticleAuraEnabled:OnChanged(function() PA_RefreshAll() end) end
@@ -1784,7 +1799,6 @@ end)
 -- === REAPPLY ON RESPAWN ===
 LP.CharacterAdded:Connect(function(char)
     task.wait(1)
-    if Vars.HatEnabled and Vars.HatStyle == "Classic" then Hat_AddClassic(char) end
     if Vars.FFEnabled then FF_Apply(char) end
     Aura_RefreshAll()
     PA_RefreshAll()
@@ -1793,7 +1807,7 @@ end)
 -- === READY ===
 task.spawn(function()
     task.wait(1)
-    pcall(function() Library:Notify("Sigma Universal v5.3 loaded! | t.me/megaswitifox", 5) end)
+    pcall(function() Library:Notify("Sigma Universal v5.4 loaded! | t.me/megaswitifox", 5) end)
 end)
-print("=== Sigma Universal v5.3 READY ===")
+print("=== Sigma Universal v5.4 READY ===")
 print("Author: @sigmatop1jj | t.me/megaswitifox")
