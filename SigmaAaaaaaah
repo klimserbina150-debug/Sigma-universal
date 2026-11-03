@@ -644,74 +644,148 @@ thHpGrad.Color = ColorSequence.new{ColorSequenceKeypoint.new(0, Color3.fromRGB(2
 thHpGrad.Parent = thHpFill
 local lastTargetHUD, chams = 0, {}
 
--- === PLAYER LIST GUI ===
+-- === PLAYER LIST (Linoria Style) ===
 local plGui = Instance.new("ScreenGui")
 plGui.Name = "SigmaPlayerList"; plGui.ResetOnSpawn = false
-plGui.IgnoreGuiInset = true; plGui.DisplayOrder = 9997
+plGui.IgnoreGuiInset = true; plGui.DisplayOrder = 9996
 pcall(function() plGui.Parent = game:GetService("CoreGui") end)
 if not plGui.Parent then plGui.Parent = LP:WaitForChild("PlayerGui") end
 plGui.Enabled = false
+
 local plFrame = Instance.new("Frame")
-plFrame.Size = UDim2.new(0,220,0,400); plFrame.Position = UDim2.new(0,10,0.3,0)
-plFrame.BackgroundColor3 = Color3.fromRGB(20,20,25); plFrame.BackgroundTransparency = 0.15
-plFrame.BorderSizePixel = 0; plFrame.Active = true; plFrame.Draggable = true
+plFrame.Size = UDim2.new(0, 240, 0, 420)
+plFrame.Position = UDim2.new(0, 10, 0.25, 0)
+plFrame.BackgroundColor3 = Color3.fromRGB(22, 22, 26)
+plFrame.BorderSizePixel = 0
+plFrame.Active = true
+plFrame.Draggable = true
 plFrame.Parent = plGui
-Instance.new("UICorner", plFrame).CornerRadius = UDim.new(0,8)
+Instance.new("UICorner", plFrame).CornerRadius = UDim.new(0, 8)
+
 local plStroke = Instance.new("UIStroke")
-plStroke.Color = Color3.fromRGB(180,100,255); plStroke.Thickness = 1; plStroke.Parent = plFrame
-local plTitle = Instance.new("TextLabel")
-plTitle.Size = UDim2.new(1,0,0,28); plTitle.BackgroundColor3 = Color3.fromRGB(30,30,38)
-plTitle.BorderSizePixel = 0; plTitle.Font = Enum.Font.GothamBold; plTitle.TextSize = 13
-plTitle.TextColor3 = Color3.fromRGB(180,100,255); plTitle.Text = "⚡ PLAYERS"; plTitle.Parent = plFrame
-Instance.new("UICorner", plTitle).CornerRadius = UDim.new(0,8)
+plStroke.Color = Color3.fromRGB(50, 50, 60)
+plStroke.Thickness = 1
+plStroke.Parent = plFrame
+
+local plTitle = Instance.new("Frame")
+plTitle.Size = UDim2.new(1, 0, 0, 32)
+plTitle.BackgroundColor3 = Color3.fromRGB(30, 30, 36)
+plTitle.BorderSizePixel = 0
+plTitle.Parent = plFrame
+Instance.new("UICorner", plTitle).CornerRadius = UDim.new(0, 8)
+
+local plAccent = Instance.new("Frame")
+plAccent.Size = UDim2.new(0, 3, 0, 20)
+plAccent.Position = UDim2.new(0, 8, 0.5, -10)
+plAccent.BackgroundColor3 = Color3.fromRGB(120, 70, 200)
+plAccent.BorderSizePixel = 0
+plAccent.Parent = plTitle
+Instance.new("UICorner", plAccent).CornerRadius = UDim.new(1, 0)
+
+local plTitleText = Instance.new("TextLabel")
+plTitleText.Size = UDim2.new(1, -30, 1, 0)
+plTitleText.Position = UDim2.new(0, 20, 0, 0)
+plTitleText.BackgroundTransparency = 1
+plTitleText.Font = Enum.Font.GothamBold
+plTitleText.TextSize = 13
+plTitleText.TextColor3 = Color3.new(1, 1, 1)
+plTitleText.Text = "Player List"
+plTitleText.TextXAlignment = Enum.TextXAlignment.Left
+plTitleText.Parent = plTitle
+
 local plScroll = Instance.new("ScrollingFrame")
-plScroll.Size = UDim2.new(1,-8,1,-36); plScroll.Position = UDim2.new(0,4,0,32)
-plScroll.BackgroundTransparency = 1; plScroll.BorderSizePixel = 0
-plScroll.ScrollBarThickness = 4; plScroll.ScrollBarImageColor3 = Color3.fromRGB(180,100,255)
-plScroll.CanvasSize = UDim2.new(0,0,0,0); plScroll.Parent = plFrame
+plScroll.Size = UDim2.new(1, -12, 1, -42)
+plScroll.Position = UDim2.new(0, 6, 0, 36)
+plScroll.BackgroundTransparency = 1
+plScroll.BorderSizePixel = 0
+plScroll.ScrollBarThickness = 3
+plScroll.ScrollBarImageColor3 = Color3.fromRGB(120, 70, 200)
+plScroll.CanvasSize = UDim2.new(0, 0, 0, 0)
+plScroll.Parent = plFrame
+
 local plLayout = Instance.new("UIListLayout")
-plLayout.Padding = UDim.new(0,4); plLayout.SortOrder = Enum.SortOrder.LayoutOrder; plLayout.Parent = plScroll
+plLayout.Padding = UDim.new(0, 4)
+plLayout.SortOrder = Enum.SortOrder.LayoutOrder
+plLayout.Parent = plScroll
+
 local plRows = {}
+
 local function RebuildPlayerList()
-    for _, row in pairs(plRows) do if row.Frame then pcall(function() row.Frame:Destroy() end) end end
+    for _, row in pairs(plRows) do 
+        if row.Frame then pcall(function() row.Frame:Destroy() end) end 
+    end
     plRows = {}
     local players = {}
-    for _, p in ipairs(Players:GetPlayers()) do if p ~= LP then table.insert(players, p) end end
+    for _, p in ipairs(Players:GetPlayers()) do 
+        if p ~= LP then table.insert(players, p) end 
+    end
     local myRoot = LP.Character and LP.Character:FindFirstChild("HumanoidRootPart")
     if myRoot then
         table.sort(players, function(a, b)
-            local aD = a.Character and a.Character:FindFirstChild("HumanoidRootPart") and (a.Character.HumanoidRootPart.Position - myRoot.Position).Magnitude or math.huge
-            local bD = b.Character and b.Character:FindFirstChild("HumanoidRootPart") and (b.Character.HumanoidRootPart.Position - myRoot.Position).Magnitude or math.huge
+            local aD = a.Character and a.Character:FindFirstChild("HumanoidRootPart") 
+                and (a.Character.HumanoidRootPart.Position - myRoot.Position).Magnitude or math.huge
+            local bD = b.Character and b.Character:FindFirstChild("HumanoidRootPart") 
+                and (b.Character.HumanoidRootPart.Position - myRoot.Position).Magnitude or math.huge
             return aD < bD
         end)
     end
     for i, p in ipairs(players) do
         local row = Instance.new("Frame")
-        row.Size = UDim2.new(1,0,0,44); row.BackgroundColor3 = Color3.fromRGB(35,35,45)
-        row.BorderSizePixel = 0; row.LayoutOrder = i; row.Parent = plScroll
-        Instance.new("UICorner", row).CornerRadius = UDim.new(0,5)
+        row.Size = UDim2.new(1, 0, 0, 48)
+        row.BackgroundColor3 = Color3.fromRGB(30, 30, 36)
+        row.BorderSizePixel = 0
+        row.LayoutOrder = i
+        row.Parent = plScroll
+        Instance.new("UICorner", row).CornerRadius = UDim.new(0, 5)
+        
+        local rowStroke = Instance.new("UIStroke")
+        rowStroke.Color = Color3.fromRGB(45, 45, 52)
+        rowStroke.Thickness = 1
+        rowStroke.Parent = row
+        
         local nameLbl = Instance.new("TextLabel")
-        nameLbl.Size = UDim2.new(1,-70,0,18); nameLbl.Position = UDim2.new(0,5,0,3)
-        nameLbl.BackgroundTransparency = 1; nameLbl.Font = Enum.Font.GothamBold; nameLbl.TextSize = 12
-        nameLbl.TextColor3 = Color3.new(1,1,1); nameLbl.TextXAlignment = Enum.TextXAlignment.Left
-        nameLbl.Text = p.Name; nameLbl.TextTruncate = Enum.TextTruncate.AtEnd; nameLbl.Parent = row
+        nameLbl.Size = UDim2.new(1, -70, 0, 18)
+        nameLbl.Position = UDim2.new(0, 8, 0, 4)
+        nameLbl.BackgroundTransparency = 1
+        nameLbl.Font = Enum.Font.GothamBold
+        nameLbl.TextSize = 12
+        nameLbl.TextColor3 = Color3.new(1, 1, 1)
+        nameLbl.TextXAlignment = Enum.TextXAlignment.Left
+        nameLbl.Text = p.Name
+        nameLbl.TextTruncate = Enum.TextTruncate.AtEnd
+        nameLbl.Parent = row
+        
         local distLbl = Instance.new("TextLabel")
-        distLbl.Size = UDim2.new(0,60,0,14); distLbl.Position = UDim2.new(1,-65,0,4)
-        distLbl.BackgroundTransparency = 1; distLbl.Font = Enum.Font.Gotham; distLbl.TextSize = 11
-        distLbl.TextColor3 = Color3.fromRGB(200,200,200); distLbl.TextXAlignment = Enum.TextXAlignment.Right
-        distLbl.Text = "0m"; distLbl.Parent = row
+        distLbl.Size = UDim2.new(0, 60, 0, 16)
+        distLbl.Position = UDim2.new(1, -68, 0, 5)
+        distLbl.BackgroundTransparency = 1
+        distLbl.Font = Enum.Font.GothamMedium
+        distLbl.TextSize = 11
+        distLbl.TextColor3 = Color3.fromRGB(180, 180, 190)
+        distLbl.TextXAlignment = Enum.TextXAlignment.Right
+        distLbl.Text = "0m"
+        distLbl.Parent = row
+        
         local hpBg = Instance.new("Frame")
-        hpBg.Size = UDim2.new(1,-10,0,12); hpBg.Position = UDim2.new(0,5,0,26)
-        hpBg.BackgroundColor3 = Color3.fromRGB(15,15,15); hpBg.BorderSizePixel = 0; hpBg.Parent = row
-        Instance.new("UICorner", hpBg).CornerRadius = UDim.new(0,3)
+        hpBg.Size = UDim2.new(1, -16, 0, 12)
+        hpBg.Position = UDim2.new(0, 8, 0, 28)
+        hpBg.BackgroundColor3 = Color3.fromRGB(15, 15, 18)
+        hpBg.BorderSizePixel = 0
+        hpBg.Parent = row
+        Instance.new("UICorner", hpBg).CornerRadius = UDim.new(0, 3)
+        
         local hpFill = Instance.new("Frame")
-        hpFill.Size = UDim2.new(1,0,1,0); hpFill.BackgroundColor3 = Color3.fromRGB(0,255,0)
-        hpFill.BorderSizePixel = 0; hpFill.Parent = hpBg
-        Instance.new("UICorner", hpFill).CornerRadius = UDim.new(0,3)
+        hpFill.Size = UDim2.new(1, 0, 1, 0)
+        hpFill.BackgroundColor3 = Color3.fromRGB(100, 200, 100)
+        hpFill.BorderSizePixel = 0
+        hpFill.Parent = hpBg
+        Instance.new("UICorner", hpFill).CornerRadius = UDim.new(0, 3)
+        
         plRows[p] = {Frame = row, NameLabel = nameLbl, DistLabel = distLbl, HPFill = hpFill}
     end
-    plScroll.CanvasSize = UDim2.new(0,0,0, plLayout.AbsoluteContentSize.Y + 10)
+    plScroll.CanvasSize = UDim2.new(0, 0, 0, plLayout.AbsoluteContentSize.Y + 6)
 end
+
 RunService.Heartbeat:Connect(function()
     pcall(function()
         if not Vars.PlayerListEnabled then plGui.Enabled = false; return end
@@ -726,14 +800,20 @@ RunService.Heartbeat:Connect(function()
                     row.DistLabel.Text = dist .. "m"
                     if hum then
                         local hp = math.clamp(hum.Health / hum.MaxHealth, 0, 1)
-                        row.HPFill.Size = UDim2.new(hp,0,1,0)
-                        row.HPFill.BackgroundColor3 = Color3.fromRGB(255*(1-hp), 255*hp, 0)
+                        row.HPFill.Size = UDim2.new(hp, 0, 1, 0)
+                        local r = math.floor(255 * (1 - hp))
+                        local g = math.floor(200 * hp)
+                        row.HPFill.BackgroundColor3 = Color3.fromRGB(r, g, 60)
                     end
-                else row.DistLabel.Text = "dead"; row.HPFill.Size = UDim2.new(0,0,1,0) end
+                else 
+                    row.DistLabel.Text = "dead"
+                    row.HPFill.Size = UDim2.new(0, 0, 1, 0)
+                end
             end
         end
     end)
 end)
+
 Players.PlayerAdded:Connect(function() task.wait(0.5); pcall(RebuildPlayerList) end)
 Players.PlayerRemoving:Connect(function() task.wait(0.5); pcall(RebuildPlayerList) end)
 task.spawn(function() task.wait(2); pcall(RebuildPlayerList) end)
@@ -1393,7 +1473,7 @@ end
 for _, p in ipairs(Players:GetPlayers()) do TrackDamageForPlayer(p) end
 Players.PlayerAdded:Connect(TrackDamageForPlayer)
 
--- lastShotTick tracking (для Hit Sound — определяем что стрелял игрок)
+-- lastShotTick tracking (для Hit Sound)
 RunService.Heartbeat:Connect(function()
     pcall(function()
         if mouseStates.MouseButton1 then
