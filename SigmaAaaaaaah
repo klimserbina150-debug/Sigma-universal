@@ -1,4 +1,4 @@
--- Sigma Universal v3.6
+-- Sigma Universal v4.0
 -- by @sigmatop1jj
 
 if getgenv().SigmaLoaded then warn("Sigma already loaded!") return end
@@ -9,7 +9,7 @@ local Library = loadstring(game:HttpGet(repo .. "Library.lua"))()
 
 local Window = Library:CreateWindow({
     Title = "Sigma Universal",
-    Footer = "by @sigmatop1jj | v3.6",
+    Footer = "by @sigmatop1jj | v4.0",
     Center = true, AutoShow = true, Resizable = true,
 })
 
@@ -44,58 +44,48 @@ local function IsKeybindActive(keyStr)
 end
 
 local Vars = {
-    -- Aimbot
     AimbotEnabled=false, AimbotAlways=false, AimbotVisibleCheck=true,
     AimbotFov=150, AimbotSmoothness=5, AimbotPrediction=0.165,
     AimbotTarget="Head", AimbotMaxDistance=1500,
     AimbotKeybind="MouseButton2", AimbotIgnoreList={},
-    -- Trigger Bot
     TriggerBotEnabled=false, TriggerBotFov=50, TriggerBotDelay=0.1,
     TriggerBotVisibleCheck=true, TriggerBotTarget="Head",
     TriggerBotMaxDistance=500, TriggerBotIgnoreList={},
-    -- Big Head
-    BigHeadEnabled=false, BigHeadScale=3, BigHeadTeamCheck=true,
-    -- FOV Circle
+    BigHeadEnabled=false, BigHeadScale=3, BigHeadTeamCheck=true, BigHeadTransparency=0,
     FovCircleEnabled=true, FovCircleFilled=false, FovCircleThickness=2,
     FovCircleRainbow=false, FovCircleColor=Color3.fromRGB(255,255,255),
-    -- Crosshair
     CrosshairEnabled=false, CrosshairStyle="Cross",
     CrosshairSize=10, CrosshairThickness=1.5, CrosshairGap=4,
     CrosshairColor=Color3.fromRGB(255,255,255), CrosshairRainbow=false,
     CrosshairDot=false, CrosshairPulse=false, CrosshairPulseSpeed=3,
     CrosshairRotation=0, CrosshairHideCursor=false,
-    -- Sounds
     HitSoundEnabled=false, HitSoundChoice="None", HitSoundVolume=1,
     CustomShootSoundEnabled=false, CustomShootSoundChoice="None", CustomShootSoundVolume=5,
-    -- Visuals
+    JumpSoundEnabled=false, JumpSoundChoice="None", JumpSoundVolume=1,
+    LandSoundEnabled=false, LandSoundChoice="None", LandSoundVolume=1,
     Fullbright=false, Brightness=2, NoFog=false, NoShadows=false,
     FovChanger=false, FovValue=70,
     Bloom=false, BloomIntensity=0.7, ColorCorrection=false,
     Saturation=0, Contrast=0, CCTint=Color3.fromRGB(255,255,255),
-    -- ESP
     ESPBox=false, ESPName=false, ESPDistance=false, ESPHealthBar=false,
     ESPTeamCheck=true, ESPMaxDistance=1500,
     ESPBoxColor=Color3.fromRGB(255,255,255), ESPTextColor=Color3.fromRGB(255,255,255),
-    -- Chams
+    SkeletonEnabled=false, SkeletonColor=Color3.fromRGB(255,255,255),
+    SkeletonThickness=1.5, SkeletonTeamCheck=true, SkeletonMaxDistance=1000,
     ChamsEnabled=false, ChamsTeamCheck=true, ChamsTransparency=0.5,
     ChamsMaxDistance=1500, ChamsFill=Color3.fromRGB(255,0,0),
     ChamsOutline=Color3.fromRGB(255,255,255), ChamsRainbow=false,
-    -- Skeleton ESP
-    SkeletonEnabled=false, SkeletonColor=Color3.fromRGB(255,255,255),
-    SkeletonThickness=1.5, SkeletonTeamCheck=true, SkeletonMaxDistance=1000,
-    -- Movement
-    Bunnyhop=false, Speedhack=false, SpeedValue=24,
+    Bunnyhop=false, BhopSpeedEnabled=false, BhopSpeedBoost=2,
+    BhopMaxSpeed=50, BhopCurrentSpeed=16,
+    Speedhack=false, SpeedValue=24,
     Fly=false, FlySpeed=50, Spinbot=false, SpinSpeed=15,
-    SpiderEnabled=false, SpiderSpeed=50,
-    NoclipEnabled=false,
-    -- World
+    SpiderEnabled=false, SpiderSpeed=50, NoclipEnabled=false,
     TimeChanger=false, TimeValue=12, AmbientOverride=false,
     AmbientColor=Color3.fromRGB(255,255,255),
     AtmEnabled=false, AtmDensity=0.35, AtmHaze=1, AtmGlare=10,
     AtmColor=Color3.fromRGB(199,212,255), AtmDecay=Color3.fromRGB(106,112,125),
     OptNoShadows=true, OptNoParticles=true, OptNoPostFX=true,
     OptNoWaterWaves=true, OptNoTextures=false, OptQuality=1,
-    -- Stats
     StatsEnabled=false, StatsPosition="TopLeft", StatsRainbow=false,
     StatsShowFPS=true, StatsShowPing=true, StatsShowMemory=true, StatsShowTime=false,
 }
@@ -133,10 +123,28 @@ local ShootSoundList = {
     ["Neverlose"]="rbxassetid://18391691942", ["Undertale"]="rbxassetid://1471213022",
     ["TF2 Critical"]="rbxassetid://8255306220", ["TF2 Frying Pan"]="rbxassetid://18922477538",
 }
-local HSNames, ShootSoundNames = {}, {}
+local JumpSoundList = {
+    ["None"]="", ["Boing"]="rbxassetid://5410086226", ["Cartoon Jump"]="rbxassetid://6682924305",
+    ["Minecraft Jump"]="rbxassetid://5771420869", ["Bhop"]="rbxassetid://9120386436",
+    ["Pop"]="rbxassetid://9125402735", ["Squeak"]="rbxassetid://131961136",
+    ["Slide Whistle"]="rbxassetid://5656414203", ["Spring"]="rbxassetid://123827281575056",
+    ["Oof"]="rbxassetid://5868987156", ["Skeet"]="rbxassetid://83717596220569",
+    ["Bonk"]="rbxassetid://5682262154", ["Quack"]="rbxassetid://6435400690",
+}
+local LandSoundList = {
+    ["None"]="", ["Thud"]="rbxassetid://5433893505", ["Minecraft Land"]="rbxassetid://5771420869",
+    ["Cartoon Land"]="rbxassetid://6652506411", ["Wood Knock"]="rbxassetid://5656221496",
+    ["Bonk"]="rbxassetid://5682262154", ["Metal"]="rbxassetid://8917041751",
+    ["Oof"]="rbxassetid://5868987156", ["Duck"]="rbxassetid://1139819274",
+    ["Skeet"]="rbxassetid://83717596220569", ["Boom"]="rbxassetid://5410086226",
+}
+
+local HSNames, ShootSoundNames, JumpSoundNames, LandSoundNames = {}, {}, {}, {}
 for k in pairs(HSList) do table.insert(HSNames, k) end
 for k in pairs(ShootSoundList) do table.insert(ShootSoundNames, k) end
-table.sort(HSNames); table.sort(ShootSoundNames)
+for k in pairs(JumpSoundList) do table.insert(JumpSoundNames, k) end
+for k in pairs(LandSoundList) do table.insert(LandSoundNames, k) end
+table.sort(HSNames); table.sort(ShootSoundNames); table.sort(JumpSoundNames); table.sort(LandSoundNames)
 
 local MeleeKeywords = {"knife","sword","axe","bat","hammer","katana","machete","pickaxe","club","fist","stick","wrench","crowbar","dagger","blade","scythe","spear","bow","crossbow","pipe","taser","shield","guitar","shovel","hoe","rake","pan"}
 local GunKeywords = {"gun","pistol","rifle","ak47","ak-47","ak74","m4","m16","shotgun","sniper","smg","revolver","deagle","glock","uzi","mp5","awp","famas","scar","lmg","minigun","launcher","rpg","bazooka","p90","vector","weapon","firearm","handgun","carbine","magnum","sks","mac-10","mac10","ump","sg","aa-12","aa12","db","double-barrel"}
@@ -182,6 +190,7 @@ local function GetFireRate(tool)
     return 0.1
 end
 
+-- TABS
 local Combat = Window:AddTab("Combat")
 local Visuals = Window:AddTab("Visuals")
 local ESPTab = Window:AddTab("ESP")
@@ -189,9 +198,7 @@ local Movement = Window:AddTab("Movement")
 local World = Window:AddTab("World")
 local Settings = Window:AddTab("Settings")
 
--- ============================================================
 -- COMBAT
--- ============================================================
 local CG = Combat:AddLeftGroupbox("Aimbot")
 T(CG,"AimbotEnabled","Aimbot",false)
 T(CG,"AimbotAlways","Auto Aim (no key)",false)
@@ -211,8 +218,9 @@ S(CG,"AimbotSmoothness","Smoothness",5,1,20,0)
 S(CG,"AimbotPrediction","Prediction",0.165,0,0.5,3)
 
 local BH = Combat:AddLeftGroupbox("Big Head")
-T(BH,"BigHeadEnabled","Big Head (enlarge head hitbox)",false)
+T(BH,"BigHeadEnabled","Big Head",false)
 S(BH,"BigHeadScale","Head Scale (x)",3,1,10,1)
+S(BH,"BigHeadTransparency","Head Transparency",0,0,1,2)
 T(BH,"BigHeadTeamCheck","Team Check",true)
 
 local TB = Combat:AddLeftGroupbox("Trigger Bot")
@@ -244,9 +252,7 @@ task.spawn(function() task.wait(1); UpdateIgnoreLists() end)
 Players.PlayerAdded:Connect(function() task.wait(1); UpdateIgnoreLists() end)
 Players.PlayerRemoving:Connect(function() task.wait(0.5); UpdateIgnoreLists() end)
 
--- ============================================================
 -- VISUALS
--- ============================================================
 local VG = Visuals:AddLeftGroupbox("Fullbright")
 T(VG,"Fullbright","Fullbright",false)
 S(VG,"Brightness","Brightness",2,0,10,1)
@@ -272,6 +278,7 @@ T(CHGroup, "CrosshairRainbow", "Rainbow", false)
 C(CHGroup, "CrosshairColor", "Color", Color3.fromRGB(255,255,255))
 T(CHGroup, "CrosshairHideCursor", "Hide System Cursor", false)
 
+-- SOUNDS
 local SG2 = Visuals:AddLeftGroupbox("Sounds")
 T(SG2,"HitSoundEnabled","Hit Sound",false)
 SG2:AddDropdown("HitSoundChoice", { Text="Hit Sound", Values=HSNames, Default="None", Callback=function(v) Vars.HitSoundChoice = v end })
@@ -280,6 +287,13 @@ SG2:AddDivider()
 T(SG2,"CustomShootSoundEnabled","Custom Shoot Sound",false)
 SG2:AddDropdown("CustomShootSoundChoice", { Text="Shoot Sound", Values=ShootSoundNames, Default="None", Callback=function(v) Vars.CustomShootSoundChoice = v end })
 S(SG2,"CustomShootSoundVolume","Shoot Volume",5,0,10,1)
+SG2:AddDivider()
+T(SG2,"JumpSoundEnabled","Jump Sound",false)
+SG2:AddDropdown("JumpSoundChoice", { Text="Jump Sound", Values=JumpSoundNames, Default="None", Callback=function(v) Vars.JumpSoundChoice = v end })
+S(SG2,"JumpSoundVolume","Jump Volume",1,0,10,1)
+T(SG2,"LandSoundEnabled","Land Sound",false)
+SG2:AddDropdown("LandSoundChoice", { Text="Land Sound", Values=LandSoundNames, Default="None", Callback=function(v) Vars.LandSoundChoice = v end })
+S(SG2,"LandSoundVolume","Land Volume",1,0,10,1)
 
 local VG2 = Visuals:AddRightGroupbox("Camera")
 T(VG2,"FovChanger","FOV Changer",false)
@@ -293,9 +307,7 @@ S(VG3,"Saturation","Saturation",0,-1,1,2)
 S(VG3,"Contrast","Contrast",0,-1,1,2)
 C(VG3,"CCTint","Tint",Color3.fromRGB(255,255,255))
 
--- ============================================================
 -- ESP
--- ============================================================
 local EG1 = ESPTab:AddLeftGroupbox("Player ESP")
 T(EG1,"ESPBox","Box",false)
 T(EG1,"ESPName","Name",false)
@@ -331,15 +343,18 @@ C(EG2,"ChamsFill","Fill Color",Color3.fromRGB(255,0,0))
 C(EG2,"ChamsOutline","Outline Color",Color3.fromRGB(255,255,255))
 T(EG2,"ChamsRainbow","Rainbow Fill",false)
 
--- ============================================================
 -- MOVEMENT
--- ============================================================
 local MG = Movement:AddLeftGroupbox("Movement")
 T(MG,"Bunnyhop","Bunnyhop",false)
 T(MG,"Speedhack","Speedhack",false)
 S(MG,"SpeedValue","Speed",24,16,200,0)
 T(MG,"Fly","Fly",false)
 S(MG,"FlySpeed","Fly Speed",50,10,300,0)
+
+local BG = Movement:AddLeftGroupbox("Bhop Speed")
+T(BG,"BhopSpeedEnabled","Bhop Speed Boost",false)
+S(BG,"BhopSpeedBoost","Speed per Jump",2,0.5,10,1)
+S(BG,"BhopMaxSpeed","Max Speed",50,16,200,0)
 
 local MG2 = Movement:AddRightGroupbox("Spider & Noclip")
 T(MG2,"SpiderEnabled","Spider (climb walls)",false)
@@ -350,9 +365,7 @@ local MG3 = Movement:AddRightGroupbox("Spinbot")
 T(MG3,"Spinbot","Spinbot",false)
 S(MG3,"SpinSpeed","Spin Speed",15,1,90,0)
 
--- ============================================================
 -- WORLD
--- ============================================================
 local WG1 = World:AddLeftGroupbox("Time & Lighting")
 T(WG1,"TimeChanger","Time Changer",false)
 S(WG1,"TimeValue","Time (0-24)",12,0,24,1)
@@ -378,9 +391,7 @@ OG:AddDivider()
 OG:AddButton("Apply Optimization", function() pcall(ApplyOptimization) end)
 OG:AddButton("Restore Graphics", function() pcall(RestoreGraphics) end)
 
--- ============================================================
 -- SETTINGS
--- ============================================================
 local SG = Settings:AddLeftGroupbox("Menu")
 SG:AddLabel("Menu Keybind (RightShift)")
 SG:AddButton("Unload", function()
@@ -390,6 +401,8 @@ SG:AddButton("Unload", function()
             for _, part in ipairs(LP.Character:GetDescendants()) do
                 if part:IsA("BasePart") then part.CanCollide = true end
             end
+            local hum = LP.Character:FindFirstChildOfClass("Humanoid")
+            if hum then hum.WalkSpeed = 16 end
         end
     end)
     pcall(function()
@@ -403,16 +416,14 @@ SG:AddButton("Unload", function()
 end)
 
 local CreditGroup = Settings:AddRightGroupbox("Credits")
-CreditGroup:AddLabel("Script: Sigma Universal v3.6")
+CreditGroup:AddLabel("Script: Sigma Universal v4.0")
 CreditGroup:AddLabel("Author: @sigmatop1jj")
 CreditGroup:AddDivider()
 CreditGroup:AddButton("Copy Telegram", function()
     pcall(function() if setclipboard then setclipboard("@sigmatop1jj"); Library:Notify("Copied", 3) end end)
 end)
 
--- ============================================================
 -- WATERMARK
--- ============================================================
 local watermarkGui = Instance.new("ScreenGui")
 watermarkGui.Name = "SigmaWatermark"
 watermarkGui.ResetOnSpawn = false
@@ -430,16 +441,14 @@ watermark.TextSize = 14
 watermark.TextColor3 = Color3.fromRGB(180, 100, 255)
 watermark.TextStrokeTransparency = 0.5
 watermark.TextXAlignment = Enum.TextXAlignment.Right
-watermark.Text = "Sigma Universal v3.6 | @sigmatop1jj"
+watermark.Text = "Sigma Universal v4.0 | @sigmatop1jj"
 watermark.Visible = false
 watermark.Parent = watermarkGui
 
 local watermarkRainbow = false
 local watermarkElapsed = 0
 
--- ============================================================
 -- STATS
--- ============================================================
 local statsGui = Instance.new("ScreenGui")
 statsGui.Name = "SigmaStats"
 statsGui.ResetOnSpawn = false
@@ -515,10 +524,7 @@ end
 local statsElapsed = 0
 RunService.Heartbeat:Connect(function(dt)
     pcall(function()
-        if not Vars.StatsEnabled then
-            statsFrame.Visible = false
-            return
-        end
+        if not Vars.StatsEnabled then statsFrame.Visible = false; return end
         statsFrame.Visible = true
         statsElapsed = statsElapsed + (dt or 0)
         local lines = {}
@@ -542,20 +548,12 @@ RunService.Heartbeat:Connect(function(dt)
 end)
 
 local function ApplyStatsPosition(pos)
-    if pos == "TopLeft" then
-        statsFrame.Position = UDim2.new(0, 10, 0, 10)
-    elseif pos == "TopRight" then
-        statsFrame.Position = UDim2.new(1, -190, 0, 10)
-    elseif pos == "BottomLeft" then
-        statsFrame.Position = UDim2.new(0, 10, 1, -110)
-    elseif pos == "BottomRight" then
-        statsFrame.Position = UDim2.new(1, -190, 1, -110)
-    end
+    if pos == "TopLeft" then statsFrame.Position = UDim2.new(0, 10, 0, 10)
+    elseif pos == "TopRight" then statsFrame.Position = UDim2.new(1, -190, 0, 10)
+    elseif pos == "BottomLeft" then statsFrame.Position = UDim2.new(0, 10, 1, -110)
+    elseif pos == "BottomRight" then statsFrame.Position = UDim2.new(1, -190, 1, -110) end
 end
 
--- ============================================================
--- FONT / SCALE / WATERMARK / STATS UI
--- ============================================================
 local function ApplyFont(fontName)
     local fontEnum = Enum.Font[fontName]
     if not fontEnum then return end
@@ -568,9 +566,7 @@ local function ApplyFont(fontName)
             end
             if isOurs then
                 for _, obj in ipairs(gui:GetDescendants()) do
-                    if obj:IsA("TextLabel") or obj:IsA("TextButton") then
-                        pcall(function() obj.Font = fontEnum end)
-                    end
+                    if obj:IsA("TextLabel") or obj:IsA("TextButton") then pcall(function() obj.Font = fontEnum end) end
                 end
             end
         end
@@ -600,21 +596,13 @@ end
 
 local function ApplyWatermarkPosition(pos)
     if pos == "TopRight" then
-        watermark.AnchorPoint = Vector2.new(0, 0)
-        watermark.Position = UDim2.new(1, -410, 0, 10)
-        watermark.TextXAlignment = Enum.TextXAlignment.Right
+        watermark.AnchorPoint = Vector2.new(0, 0); watermark.Position = UDim2.new(1, -410, 0, 10); watermark.TextXAlignment = Enum.TextXAlignment.Right
     elseif pos == "TopLeft" then
-        watermark.AnchorPoint = Vector2.new(0, 0)
-        watermark.Position = UDim2.new(0, 10, 0, 10)
-        watermark.TextXAlignment = Enum.TextXAlignment.Left
+        watermark.AnchorPoint = Vector2.new(0, 0); watermark.Position = UDim2.new(0, 10, 0, 10); watermark.TextXAlignment = Enum.TextXAlignment.Left
     elseif pos == "BottomRight" then
-        watermark.AnchorPoint = Vector2.new(0, 0)
-        watermark.Position = UDim2.new(1, -410, 1, -30)
-        watermark.TextXAlignment = Enum.TextXAlignment.Right
+        watermark.AnchorPoint = Vector2.new(0, 0); watermark.Position = UDim2.new(1, -410, 1, -30); watermark.TextXAlignment = Enum.TextXAlignment.Right
     elseif pos == "BottomLeft" then
-        watermark.AnchorPoint = Vector2.new(0, 0)
-        watermark.Position = UDim2.new(0, 10, 1, -30)
-        watermark.TextXAlignment = Enum.TextXAlignment.Left
+        watermark.AnchorPoint = Vector2.new(0, 0); watermark.Position = UDim2.new(0, 10, 1, -30); watermark.TextXAlignment = Enum.TextXAlignment.Left
     end
 end
 
@@ -639,71 +627,34 @@ CustomGroup:AddDropdown("UIFont", {
 })
 
 CustomGroup:AddSlider("UIScaleSlider", {
-    Text = "UI Scale",
-    Default = 1, Min = 0.7, Max = 1.5, Rounding = 2,
+    Text = "UI Scale", Default = 1, Min = 0.7, Max = 1.5, Rounding = 2,
     Callback = function(v) ApplyScale(v) end,
 })
 
 CustomGroup:AddDivider()
-CustomGroup:AddToggle("WatermarkEnabled", {
-    Text = "Watermark",
-    Default = false,
-    Callback = function(v) watermark.Visible = v end,
-})
+CustomGroup:AddToggle("WatermarkEnabled", { Text = "Watermark", Default = false, Callback = function(v) watermark.Visible = v end })
 CustomGroup:AddInput("WatermarkText", {
-    Text = "Watermark Text",
-    Default = "Sigma Universal v3.6 | @sigmatop1jj",
-    Finished = true,
-    Callback = function(v)
-        if v and v ~= "" then watermark.Text = v end
-    end,
+    Text = "Watermark Text", Default = "Sigma Universal v4.0 | @sigmatop1jj", Finished = true,
+    Callback = function(v) if v and v ~= "" then watermark.Text = v end end,
 })
 CustomGroup:AddDropdown("WatermarkPos", {
-    Text = "Watermark Position",
-    Values = {"TopRight", "TopLeft", "BottomRight", "BottomLeft"},
-    Default = "TopRight",
+    Text = "Watermark Position", Values = {"TopRight", "TopLeft", "BottomRight", "BottomLeft"}, Default = "TopRight",
     Callback = function(v) ApplyWatermarkPosition(v) end,
 })
-CustomGroup:AddToggle("WatermarkRainbow", {
-    Text = "Watermark Rainbow",
-    Default = false,
-    Callback = function(v) watermarkRainbow = v end,
-})
+CustomGroup:AddToggle("WatermarkRainbow", { Text = "Watermark Rainbow", Default = false, Callback = function(v) watermarkRainbow = v end })
 
 CustomGroup:AddDivider()
-CustomGroup:AddToggle("StatsEnabled", {
-    Text = "FPS/Ping Stats",
-    Default = false,
-    Callback = function(v) Vars.StatsEnabled = v end,
-})
+CustomGroup:AddToggle("StatsEnabled", { Text = "FPS/Ping Stats", Default = false, Callback = function(v) Vars.StatsEnabled = v end })
 CustomGroup:AddDropdown("StatsPosition", {
-    Text = "Stats Position",
-    Values = {"TopLeft", "TopRight", "BottomLeft", "BottomRight"},
-    Default = "TopLeft",
+    Text = "Stats Position", Values = {"TopLeft", "TopRight", "BottomLeft", "BottomRight"}, Default = "TopLeft",
     Callback = function(v) ApplyStatsPosition(v) end,
 })
-CustomGroup:AddToggle("StatsShowFPS", {
-    Text = "Show FPS", Default = true,
-    Callback = function(v) Vars.StatsShowFPS = v end,
-})
-CustomGroup:AddToggle("StatsShowPing", {
-    Text = "Show Ping", Default = true,
-    Callback = function(v) Vars.StatsShowPing = v end,
-})
-CustomGroup:AddToggle("StatsShowMemory", {
-    Text = "Show Memory", Default = true,
-    Callback = function(v) Vars.StatsShowMemory = v end,
-})
-CustomGroup:AddToggle("StatsShowTime", {
-    Text = "Show Time", Default = false,
-    Callback = function(v) Vars.StatsShowTime = v end,
-})
-CustomGroup:AddToggle("StatsRainbow", {
-    Text = "Stats Rainbow", Default = false,
-    Callback = function(v) Vars.StatsRainbow = v end,
-})
+CustomGroup:AddToggle("StatsShowFPS", { Text = "Show FPS", Default = true, Callback = function(v) Vars.StatsShowFPS = v end })
+CustomGroup:AddToggle("StatsShowPing", { Text = "Show Ping", Default = true, Callback = function(v) Vars.StatsShowPing = v end })
+CustomGroup:AddToggle("StatsShowMemory", { Text = "Show Memory", Default = true, Callback = function(v) Vars.StatsShowMemory = v end })
+CustomGroup:AddToggle("StatsShowTime", { Text = "Show Time", Default = false, Callback = function(v) Vars.StatsShowTime = v end })
+CustomGroup:AddToggle("StatsRainbow", { Text = "Stats Rainbow", Default = false, Callback = function(v) Vars.StatsRainbow = v end })
 
--- Watermark rainbow loop
 RunService.RenderStepped:Connect(function(dt)
     pcall(function()
         if watermarkRainbow and watermark.Visible then
@@ -713,9 +664,7 @@ RunService.RenderStepped:Connect(function(dt)
     end)
 end)
 
--- ============================================================
 -- IGNORE / TARGET / VISIBLE
--- ============================================================
 local function IsIgnoredByAim(p)
     if not p or not Vars.AimbotIgnoreList then return false end
     return Vars.AimbotIgnoreList[p.Name] == true
@@ -751,9 +700,7 @@ local function IsVisible(targetChar, mode)
     return ok and result or false
 end
 
--- ============================================================
 -- AIMBOT
--- ============================================================
 local function GetClosestPlayer()
     local ok, result = pcall(function()
         local myRoot = LP.Character and LP.Character:FindFirstChild("HumanoidRootPart")
@@ -800,49 +747,62 @@ RunService.RenderStepped:Connect(function()
     end)
 end)
 
--- ============================================================
 -- BIG HEAD
--- ============================================================
-local originalHeadSizes = {}
+local originalHeadData = {}
+
+local function GetHeadData(char, head, hum)
+    local data = originalHeadData[char]
+    if data then return data end
+    data = { headSize = head.Size, meshScale = nil, headScale = nil }
+    local mesh = head:FindFirstChildOfClass("SpecialMesh")
+    if mesh then data.meshScale = mesh.Scale end
+    if hum then
+        local hs = hum:FindFirstChild("HeadScale")
+        if hs and hs:IsA("NumberValue") then data.headScale = hs.Value end
+    end
+    originalHeadData[char] = data
+    return data
+end
 
 local function ApplyBigHead(char)
     if not char then return end
     local head = char:FindFirstChild("Head")
     if not head or not head:IsA("BasePart") then return end
-    if not originalHeadSizes[head] then
-        originalHeadSizes[head] = {
-            Size = head.Size,
-            Transparency = head.Transparency,
-            CanCollide = head.CanCollide,
-            Massless = head.Massless,
-        }
+    local hum = char:FindFirstChildOfClass("Humanoid")
+    local data = GetHeadData(char, head, hum)
+    local scale = Vars.BigHeadScale
+    local transp = Vars.BigHeadTransparency or 0
+    pcall(function() head.Size = data.headSize * scale end)
+    pcall(function() head.Transparency = transp end)
+    local mesh = head:FindFirstChildOfClass("SpecialMesh")
+    if mesh and data.meshScale then pcall(function() mesh.Scale = data.meshScale * scale end) end
+    if hum then
+        local hs = hum:FindFirstChild("HeadScale")
+        if hs and hs:IsA("NumberValue") and data.headScale then
+            pcall(function() hs.Value = data.headScale * scale end)
+        end
     end
-    pcall(function()
-        local orig = originalHeadSizes[head]
-        head.Size = orig.Size * Vars.BigHeadScale
-        head.Transparency = orig.Transparency
-        head.CanCollide = false
-        head.Massless = true
-    end)
 end
 
 local function RestoreBigHead(char)
     if not char then return end
+    local data = originalHeadData[char]
+    if not data then return end
     local head = char:FindFirstChild("Head")
-    if not head then return end
-    local orig = originalHeadSizes[head]
-    if orig then
-        pcall(function()
-            head.Size = orig.Size
-            head.Transparency = orig.Transparency
-            head.CanCollide = orig.CanCollide
-            head.Massless = orig.Massless
-        end)
-        originalHeadSizes[head] = nil
+    local hum = char:FindFirstChildOfClass("Humanoid")
+    if head and head:IsA("BasePart") then
+        pcall(function() head.Size = data.headSize; head.Transparency = 0 end)
+        local mesh = head:FindFirstChildOfClass("SpecialMesh")
+        if mesh and data.meshScale then pcall(function() mesh.Scale = data.meshScale end) end
     end
+    if hum then
+        local hs = hum:FindFirstChild("HeadScale")
+        if hs and hs:IsA("NumberValue") and data.headScale then pcall(function() hs.Value = data.headScale end) end
+    end
+    originalHeadData[char] = nil
 end
 
-RunService.Heartbeat:Connect(function()
+local function BigHeadLoop()
     pcall(function()
         if not Vars.BigHeadEnabled then
             for _, p in ipairs(Players:GetPlayers()) do
@@ -852,32 +812,42 @@ RunService.Heartbeat:Connect(function()
         end
         for _, p in ipairs(Players:GetPlayers()) do
             if p ~= LP and p.Character then
-                if Vars.BigHeadTeamCheck and p.Team == LP.Team then
-                    RestoreBigHead(p.Character)
-                    continue
-                end
+                if Vars.BigHeadTeamCheck and p.Team == LP.Team then RestoreBigHead(p.Character); continue end
                 local hum = p.Character:FindFirstChildOfClass("Humanoid")
                 if hum and hum.Health > 0 then ApplyBigHead(p.Character)
                 else RestoreBigHead(p.Character) end
             end
         end
     end)
-end)
+end
+RunService.RenderStepped:Connect(BigHeadLoop)
+RunService.Heartbeat:Connect(BigHeadLoop)
+RunService.Stepped:Connect(BigHeadLoop)
 
+local function SetupBigHeadForPlayer(p)
+    if p == LP then return end
+    p.CharacterAdded:Connect(function(ch)
+        task.wait(1)
+        originalHeadData[ch] = nil
+        if Vars.BigHeadEnabled then ApplyBigHead(ch) end
+    end)
+end
+for _, p in ipairs(Players:GetPlayers()) do SetupBigHeadForPlayer(p) end
+Players.PlayerAdded:Connect(SetupBigHeadForPlayer)
 Players.PlayerRemoving:Connect(function(p)
     if p.Character then RestoreBigHead(p.Character) end
 end)
 
-Players.PlayerAdded:Connect(function(p)
-    p.CharacterAdded:Connect(function(ch)
-        task.wait(1)
-        if Vars.BigHeadEnabled then ApplyBigHead(ch) end
-    end)
+task.spawn(function()
+    while true do
+        task.wait(10)
+        for ch in pairs(originalHeadData) do
+            if not ch or not ch.Parent then originalHeadData[ch] = nil end
+        end
+    end
 end)
 
--- ============================================================
 -- TRIGGER BOT
--- ============================================================
 local lastTriggerTime = 0
 local function ClickMouse()
     if mouse1click then pcall(mouse1click); return true end
@@ -926,9 +896,7 @@ RunService.RenderStepped:Connect(function()
     end)
 end)
 
--- ============================================================
 -- FOV CIRCLE
--- ============================================================
 local FovCircle, FovLines = nil, nil
 pcall(function()
     FovCircle = Drawing.new("Circle")
@@ -971,9 +939,7 @@ RunService.RenderStepped:Connect(function()
     end)
 end)
 
--- ============================================================
 -- CROSSHAIR
--- ============================================================
 local crosshairLines = {}
 for i = 1, 12 do
     local l = Drawing.new("Line")
@@ -1018,7 +984,6 @@ RunService.RenderStepped:Connect(function(dt)
         dt = dt or 0
         crosshairElapsed = crosshairElapsed + dt
         crosshairRot = (crosshairRot + dt * Vars.CrosshairRotation) % 360
-
         if not Vars.CrosshairEnabled then
             for _, l in ipairs(crosshairLines) do l.Visible = false end
             for _, c in ipairs(crosshairCircles) do c.Visible = false end
@@ -1026,7 +991,6 @@ RunService.RenderStepped:Connect(function(dt)
             UpdateCursorVisibility()
             return
         end
-
         local center = Vector2.new(Cam.ViewportSize.X / 2, Cam.ViewportSize.Y / 2)
         local col = Vars.CrosshairColor
         if Vars.CrosshairRainbow then col = Color3.fromHSV((crosshairElapsed * 0.5) % 1, 1, 1) end
@@ -1037,11 +1001,9 @@ RunService.RenderStepped:Connect(function(dt)
         local size = Vars.CrosshairSize
         local thick = Vars.CrosshairThickness
         local style = Vars.CrosshairStyle
-
         for _, l in ipairs(crosshairLines) do l.Visible = false end
         for _, c in ipairs(crosshairCircles) do c.Visible = false end
         if crosshairDot then crosshairDot.Visible = false end
-
         local function line(idx, angleDeg, fromDist, toDist)
             local l = crosshairLines[idx]
             if not l then return end
@@ -1051,19 +1013,16 @@ RunService.RenderStepped:Connect(function(dt)
             l.To = Vector2.new(center.X + dx * toDist, center.Y + dy * toDist)
             l.Color = col; l.Thickness = thick; l.Visible = true
         end
-
         if style == "Cross" then
             line(1, 0, gap, gap + size); line(2, 180, gap, gap + size)
             line(3, 90, gap, gap + size); line(4, 270, gap, gap + size)
         elseif style == "Plus" then
-            line(1, 0, 0, size); line(2, 180, 0, size)
-            line(3, 90, 0, size); line(4, 270, 0, size)
+            line(1, 0, 0, size); line(2, 180, 0, size); line(3, 90, 0, size); line(4, 270, 0, size)
         elseif style == "X" then
             line(1, 45, gap, gap + size); line(2, 225, gap, gap + size)
             line(3, 135, gap, gap + size); line(4, 315, gap, gap + size)
         elseif style == "T-Shape" then
-            line(1, 0, gap, gap + size); line(2, 180, gap, gap + size)
-            line(3, 270, gap, gap + size)
+            line(1, 0, gap, gap + size); line(2, 180, gap, gap + size); line(3, 270, gap, gap + size)
         elseif style == "Pinwheel" then
             for i = 0, 3 do
                 local baseAngle = i * 90
@@ -1088,36 +1047,31 @@ RunService.RenderStepped:Connect(function(dt)
             line(3, 180, gap, gap + size); line(4, 270, gap, gap + size)
             line(5, 45, gap, gap + size * 0.8); line(6, 135, gap, gap + size * 0.8)
         elseif style == "Circle" then
-            local circleRadius = size
+            local cr = size
             if crosshairCircles[1] and crosshairCircles[1].Type and crosshairCircles[1].Type.Name == "Circle" then
                 local c = crosshairCircles[1]
-                c.Position = center; c.Radius = circleRadius
-                c.Thickness = thick; c.Color = col; c.Visible = true
+                c.Position = center; c.Radius = cr; c.Thickness = thick; c.Color = col; c.Visible = true
             else
                 for i, l in ipairs(crosshairCircles) do
                     local a1 = ((i - 1) / #crosshairCircles) * math.pi * 2
                     local a2 = (i / #crosshairCircles) * math.pi * 2
-                    l.From = center + Vector2.new(math.cos(a1), math.sin(a1)) * circleRadius
-                    l.To = center + Vector2.new(math.cos(a2), math.sin(a2)) * circleRadius
+                    l.From = center + Vector2.new(math.cos(a1), math.sin(a1)) * cr
+                    l.To = center + Vector2.new(math.cos(a2), math.sin(a2)) * cr
                     l.Color = col; l.Thickness = thick; l.Visible = true
                 end
             end
         end
-
         if crosshairDot and (Vars.CrosshairDot or style == "Dot") then
             local ds = style == "Dot" and math.max(thick, 2) or 3
             crosshairDot.Size = Vector2.new(ds, ds)
             crosshairDot.Position = Vector2.new(center.X - ds/2, center.Y - ds/2)
             crosshairDot.Color = col; crosshairDot.Visible = true
         end
-
         UpdateCursorVisibility()
     end)
 end)
 
--- ============================================================
 -- HIT SOUND
--- ============================================================
 local lastShotTick = 0
 local hitSoundConns = {}
 local lastHitSoundTick = 0
@@ -1160,9 +1114,7 @@ Players.PlayerRemoving:Connect(function(p)
     if hitSoundConns[p] then pcall(function() hitSoundConns[p]:Disconnect() end); hitSoundConns[p] = nil end
 end)
 
--- ============================================================
 -- CUSTOM SHOOT SOUND
--- ============================================================
 local function PlayShootSound()
     if not Vars.CustomShootSoundEnabled or Vars.CustomShootSoundChoice == "None" then return end
     local id = ShootSoundList[Vars.CustomShootSoundChoice] or ""
@@ -1176,6 +1128,62 @@ local function PlayShootSound()
     end)
 end
 
+-- PLAY JUMP/LAND SOUND
+local function PlayJumpSound()
+    if not Vars.JumpSoundEnabled or Vars.JumpSoundChoice == "None" then return end
+    local id = JumpSoundList[Vars.JumpSoundChoice] or ""
+    if id == "" then return end
+    pcall(function()
+        local snd = Instance.new("Sound")
+        snd.SoundId = id; snd.Volume = Vars.JumpSoundVolume
+        snd.Parent = LP.Character
+        snd:Play()
+        Debris:AddItem(snd, 3)
+    end)
+end
+
+local function PlayLandSound()
+    if not Vars.LandSoundEnabled or Vars.LandSoundChoice == "None" then return end
+    local id = LandSoundList[Vars.LandSoundChoice] or ""
+    if id == "" then return end
+    pcall(function()
+        local snd = Instance.new("Sound")
+        snd.SoundId = id; snd.Volume = Vars.LandSoundVolume
+        snd.Parent = LP.Character
+        snd:Play()
+        Debris:AddItem(snd, 3)
+    end)
+end
+
+-- HOOK STATE CHANGED FOR JUMP/LAND SOUND + BHOP SPEED
+local stateConn = nil
+local wasOnGround = true
+
+local function SetupStateHook(char)
+    if stateConn then pcall(function() stateConn:Disconnect() end) end
+    local hum = char:WaitForChild("Humanoid", 5)
+    if not hum then return end
+    stateConn = hum.StateChanged:Connect(function(oldState, newState)
+        -- Прыжок
+        if newState == Enum.HumanoidStateType.Jumping then
+            PlayJumpSound()
+            -- Bhop Speed Boost
+            if Vars.BhopSpeedEnabled then
+                Vars.BhopCurrentSpeed = math.min(Vars.BhopCurrentSpeed + Vars.BhopSpeedBoost, Vars.BhopMaxSpeed)
+            end
+        end
+        -- Приземление
+        if (oldState == Enum.HumanoidStateType.Freefall or oldState == Enum.HumanoidStateType.Jumping)
+           and newState == Enum.HumanoidStateType.Landed then
+            PlayLandSound()
+        end
+    end)
+end
+
+LP.CharacterAdded:Connect(function(ch) task.wait(1); SetupStateHook(ch) end)
+if LP.Character then task.spawn(function() task.wait(1); SetupStateHook(LP.Character) end) end
+
+-- CUSTOM SHOOT SOUND + lastShotTick
 local lastShootSoundTime = 0
 RunService.Heartbeat:Connect(function()
     pcall(function()
@@ -1194,21 +1202,40 @@ RunService.Heartbeat:Connect(function()
     end)
 end)
 
--- ============================================================
--- MOVEMENT + SPIDER + NOCLIP
--- ============================================================
+-- MOVEMENT + BHOP SPEED + SPIDER + NOCLIP
 RunService.Heartbeat:Connect(function()
     pcall(function()
         local char = LP.Character
         if not char or not char:FindFirstChild("HumanoidRootPart") then return end
         local hum = char:FindFirstChildOfClass("Humanoid")
         local root = char.HumanoidRootPart
+
+        -- BHOP SPEED: применение накопленной скорости
+        if Vars.BhopSpeedEnabled and hum then
+            if hum.FloorMaterial == Enum.Material.Air then
+                hum.WalkSpeed = Vars.BhopCurrentSpeed
+            else
+                -- На земле — тоже держим скорость (иначе сбросится)
+                hum.WalkSpeed = Vars.BhopCurrentSpeed
+            end
+            -- Если стоишь без движения долго — сброс
+            if hum.MoveDirection.Magnitude == 0 and hum.FloorMaterial ~= Enum.Material.Air then
+                Vars.BhopCurrentSpeed = math.max(16, Vars.BhopCurrentSpeed - 0.5)
+            end
+        elseif not Vars.BhopSpeedEnabled then
+            Vars.BhopCurrentSpeed = 16
+        end
+
+        -- Обычный Bunnyhop
         if Vars.Bunnyhop and hum and hum.FloorMaterial ~= Enum.Material.Air then
             hum:ChangeState(Enum.HumanoidStateType.Jumping)
         end
+
+        -- Speedhack (перезаписывает Bhop если включён)
         if Vars.Speedhack and hum and hum.MoveDirection.Magnitude > 0 then
             root.Velocity = Vector3.new(hum.MoveDirection.X * Vars.SpeedValue, root.Velocity.Y, hum.MoveDirection.Z * Vars.SpeedValue)
         end
+
         if Vars.Fly then
             local dir = VEC0
             if UIS:IsKeyDown(Enum.KeyCode.W) then dir = dir + Cam.CFrame.LookVector end
@@ -1217,6 +1244,7 @@ RunService.Heartbeat:Connect(function()
             if UIS:IsKeyDown(Enum.KeyCode.D) then dir = dir + Cam.CFrame.RightVector end
             root.Velocity = dir * Vars.FlySpeed + Vector3.new(0, 0.5, 0)
         end
+
         if Vars.SpiderEnabled and hum and UIS:IsKeyDown(Enum.KeyCode.W) then
             local rayParams = RaycastParams.new()
             rayParams.FilterType = excludeEnum
@@ -1226,20 +1254,17 @@ RunService.Heartbeat:Connect(function()
                 root.Velocity = Vector3.new(root.Velocity.X, Vars.SpiderSpeed, root.Velocity.Z)
             end
         end
+
         if Vars.NoclipEnabled then
             for _, part in ipairs(char:GetDescendants()) do
-                if part:IsA("BasePart") and part.CanCollide then
-                    pcall(function() part.CanCollide = false end)
-                end
+                if part:IsA("BasePart") and part.CanCollide then pcall(function() part.CanCollide = false end) end
             end
         end
-        if Vars.Spinbot then
-            root.CFrame = root.CFrame * CFrame.Angles(0, math.rad(Vars.SpinSpeed), 0)
-        end
+
+        if Vars.Spinbot then root.CFrame = root.CFrame * CFrame.Angles(0, math.rad(Vars.SpinSpeed), 0) end
     end)
 end)
 
--- NOCLIP auto-restore
 task.spawn(function()
     task.wait(2)
     pcall(function()
@@ -1252,12 +1277,21 @@ task.spawn(function()
                 end
             end)
         end
+        if Toggles and Toggles.BhopSpeedEnabled then
+            Toggles.BhopSpeedEnabled:OnChanged(function(v)
+                if not v then
+                    Vars.BhopCurrentSpeed = 16
+                    if LP.Character then
+                        local hum = LP.Character:FindFirstChildOfClass("Humanoid")
+                        if hum then hum.WalkSpeed = 16 end
+                    end
+                end
+            end)
+        end
     end)
 end)
 
--- ============================================================
 -- WORLD
--- ============================================================
 local Def = {
     Brightness=Lighting.Brightness, ClockTime=Lighting.ClockTime,
     GlobalShadows=Lighting.GlobalShadows, OutdoorAmbient=Lighting.OutdoorAmbient,
@@ -1300,9 +1334,7 @@ RunService.Heartbeat:Connect(function()
     end)
 end)
 
--- ============================================================
 -- OPTIMIZATION
--- ============================================================
 local RemovedParticles, RemovedPostFX, OriginalWater = {}, {}, {}
 function ApplyOptimization()
     if Vars.OptNoShadows then
@@ -1365,9 +1397,7 @@ function RestoreGraphics()
     pcall(function() Library:Notify("Graphics restored", 3) end)
 end
 
--- ============================================================
 -- ESP
--- ============================================================
 ESP_Data = ESP_Data or {}
 function MakeESP(p)
     if not p or p == LP then return end
@@ -1444,11 +1474,8 @@ RunService.RenderStepped:Connect(function()
     end)
 end)
 
--- ============================================================
 -- SKELETON ESP
--- ============================================================
 local SkeletonData = {}
-
 local SkeletonConnections_R15 = {
     {"Head", "UpperTorso"},
     {"UpperTorso", "LowerTorso"},
@@ -1464,6 +1491,10 @@ local SkeletonConnections_R15 = {
     {"LowerTorso", "RightUpperLeg"},
     {"RightUpperLeg", "RightLowerLeg"},
     {"RightLowerLeg", "RightFoot"},
+    {"LeftUpperArm", "RightUpperArm"},
+    {"LeftHand", "RightHand"},
+    {"LeftUpperLeg", "RightUpperLeg"},
+    {"LeftFoot", "RightFoot"},
 }
 local SkeletonConnections_R6 = {
     {"Head", "Torso"},
@@ -1471,6 +1502,8 @@ local SkeletonConnections_R6 = {
     {"Torso", "Right Arm"},
     {"Torso", "Left Leg"},
     {"Torso", "Right Leg"},
+    {"Left Arm", "Right Arm"},
+    {"Left Leg", "Right Leg"},
 }
 
 local function MakeSkeleton(p)
@@ -1479,7 +1512,7 @@ local function MakeSkeleton(p)
         for _, line in ipairs(SkeletonData[p]) do pcall(function() line:Remove() end) end
     end
     local lines = {}
-    for i = 1, 14 do
+    for i = 1, 20 do
         local l = Drawing.new("Line")
         l.Visible = false; l.Thickness = 1.5; l.Color = Color3.new(1,1,1); l.ZIndex = 4
         table.insert(lines, l)
@@ -1539,9 +1572,7 @@ RunService.RenderStepped:Connect(function()
     end)
 end)
 
--- ============================================================
 -- CHAMS
--- ============================================================
 local chams = {}
 local function ApplyChams(p)
     if p == LP or not p.Character then return end
@@ -1585,12 +1616,9 @@ RunService.Heartbeat:Connect(function()
 end)
 Players.PlayerRemoving:Connect(RemoveChams)
 
--- ============================================================
--- READY
--- ============================================================
 task.spawn(function()
     task.wait(1)
-    pcall(function() Library:Notify("Sigma Universal v3.6 loaded!", 5) end)
+    pcall(function() Library:Notify("Sigma Universal v4.0 loaded!", 5) end)
 end)
-print("=== Sigma Universal v3.6 READY ===")
+print("=== Sigma Universal v4.0 READY ===")
 print("Author: @sigmatop1jj")
