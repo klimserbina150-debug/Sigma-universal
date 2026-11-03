@@ -1,4 +1,4 @@
--- Sigma Universal v3.2
+-- Sigma Universal v3.4
 -- by @sigmatop1jj
 
 if getgenv().SigmaLoaded then warn("Sigma already loaded!") return end
@@ -9,7 +9,7 @@ local Library = loadstring(game:HttpGet(repo .. "Library.lua"))()
 
 local Window = Library:CreateWindow({
     Title = "Sigma Universal",
-    Footer = "by @sigmatop1jj | v3.2",
+    Footer = "by @sigmatop1jj | v3.4",
     Center = true, AutoShow = true, Resizable = true,
 })
 
@@ -17,13 +17,11 @@ local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local UIS = game:GetService("UserInputService")
 local Lighting = game:GetService("Lighting")
-local TweenService = game:GetService("TweenService")
 local Debris = game:GetService("Debris")
 local LP = Players.LocalPlayer
 local Cam = workspace.CurrentCamera
 local VEC0 = Vector3.new(0, 0, 0)
 
--- KEY STATE
 local keyStates, mouseStates = {}, {}
 UIS.InputBegan:Connect(function(input)
     if input.UserInputType == Enum.UserInputType.MouseButton1 then mouseStates.MouseButton1 = true
@@ -53,7 +51,6 @@ local Vars = {
     TriggerBotEnabled=false, TriggerBotFov=50, TriggerBotDelay=0.1,
     TriggerBotVisibleCheck=true, TriggerBotTarget="Head",
     TriggerBotMaxDistance=500, TriggerBotIgnoreList={},
-    HitboxEnabled=false, HitboxScale=2, HitboxTeamCheck=true,
     FovCircleEnabled=true, FovCircleFilled=false, FovCircleThickness=2,
     FovCircleRainbow=false, FovCircleColor=Color3.fromRGB(255,255,255),
     CrosshairEnabled=false, CrosshairStyle="Cross",
@@ -61,8 +58,6 @@ local Vars = {
     CrosshairColor=Color3.fromRGB(255,255,255), CrosshairRainbow=false,
     CrosshairDot=false, CrosshairPulse=false, CrosshairPulseSpeed=3,
     CrosshairRotation=0, CrosshairHideCursor=false,
-    TracerEnabled=false, TracerLifetime=0.5, TracerThickness=0.1,
-    TracerColor=Color3.fromRGB(0,255,255), TracerGlow=true, TracerStartTransparency=0,
     HitSoundEnabled=false, HitSoundChoice="None", HitSoundVolume=1,
     CustomShootSoundEnabled=false, CustomShootSoundChoice="None", CustomShootSoundVolume=5,
     Fullbright=false, Brightness=2, NoFog=false, NoShadows=false,
@@ -85,6 +80,8 @@ local Vars = {
     AtmColor=Color3.fromRGB(199,212,255), AtmDecay=Color3.fromRGB(106,112,125),
     OptNoShadows=true, OptNoParticles=true, OptNoPostFX=true,
     OptNoWaterWaves=true, OptNoTextures=false, OptQuality=1,
+    StatsEnabled=false, StatsPosition="TopLeft", StatsRainbow=false,
+    StatsShowFPS=true, StatsShowPing=true, StatsShowMemory=true, StatsShowTime=false,
 }
 
 local function T(box, key, text, default)
@@ -125,7 +122,6 @@ for k in pairs(HSList) do table.insert(HSNames, k) end
 for k in pairs(ShootSoundList) do table.insert(ShootSoundNames, k) end
 table.sort(HSNames); table.sort(ShootSoundNames)
 
--- WEAPON DETECTION
 local MeleeKeywords = {"knife","sword","axe","bat","hammer","katana","machete","pickaxe","club","fist","stick","wrench","crowbar","dagger","blade","scythe","spear","bow","crossbow","pipe","taser","shield","guitar","shovel","hoe","rake","pan"}
 local GunKeywords = {"gun","pistol","rifle","ak47","ak-47","ak74","m4","m16","shotgun","sniper","smg","revolver","deagle","glock","uzi","mp5","awp","famas","scar","lmg","minigun","launcher","rpg","bazooka","p90","vector","weapon","firearm","handgun","carbine","magnum","sks","mac-10","mac10","ump","sg","aa-12","aa12","db","double-barrel"}
 local function IsGunTool(tool)
@@ -147,31 +143,6 @@ local function IsGunTool(tool)
         end
     end
     return false
-end
-
-local MuzzleNames = {"Muzzle","Barrel","FirePoint","ShootPoint","Nozzle","Tip","BarrelTip","MuzzlePoint","FirePos","ShootPos","ShootPart","FirePart"}
-local function GetMuzzle(tool, char)
-    if not tool then return nil end
-    for _, n in ipairs(MuzzleNames) do
-        local p = tool:FindFirstChild(n, true)
-        if p and p:IsA("BasePart") then return p end
-    end
-    local handle = tool:FindFirstChild("Handle")
-    if handle and handle:IsA("BasePart") then
-        local hrp = char and char:FindFirstChild("HumanoidRootPart")
-        if hrp then
-            local farthest, farthestDist = nil, 0
-            for _, c in ipairs(tool:GetDescendants()) do
-                if c:IsA("BasePart") and c ~= handle then
-                    local d = (c.Position - hrp.Position).Magnitude
-                    if d > farthestDist then farthest, farthestDist = c, d end
-                end
-            end
-            if farthest then return farthest end
-        end
-        return handle
-    end
-    return tool:FindFirstChildWhichIsA("BasePart")
 end
 
 local function GetFireRate(tool)
@@ -220,11 +191,6 @@ S(CG,"AimbotFov","FOV",150,10,800,0)
 S(CG,"AimbotMaxDistance","Max Distance",1500,0,10000,0)
 S(CG,"AimbotSmoothness","Smoothness",5,1,20,0)
 S(CG,"AimbotPrediction","Prediction",0.165,0,0.5,3)
-
-local HB = Combat:AddLeftGroupbox("Hitbox Expander")
-T(HB,"HitboxEnabled","Hitbox Expander",false)
-S(HB,"HitboxScale","Hitbox Scale (x)",2,1,10,1)
-T(HB,"HitboxTeamCheck","Team Check",true)
 
 local TB = Combat:AddLeftGroupbox("Trigger Bot")
 T(TB,"TriggerBotEnabled","Trigger Bot",false)
@@ -280,14 +246,6 @@ S(CHGroup, "CrosshairPulseSpeed", "Pulse Speed", 3, 0.5, 10, 1)
 T(CHGroup, "CrosshairRainbow", "Rainbow", false)
 C(CHGroup, "CrosshairColor", "Color", Color3.fromRGB(255,255,255))
 T(CHGroup, "CrosshairHideCursor", "Hide System Cursor", false)
-
-local TRG = Visuals:AddLeftGroupbox("Tracers")
-T(TRG,"TracerEnabled","Bullet Tracers",false)
-S(TRG,"TracerLifetime","Lifetime (sec)",0.5,0.1,3,2)
-S(TRG,"TracerThickness","Thickness",0.1,0.02,1,2)
-S(TRG,"TracerStartTransparency","Start Transparency",0,0,1,2)
-T(TRG,"TracerGlow","Glow",true)
-C(TRG,"TracerColor","Color",Color3.fromRGB(0,255,255))
 
 local SG2 = Visuals:AddLeftGroupbox("Sounds")
 T(SG2,"HitSoundEnabled","Hit Sound",false)
@@ -394,15 +352,325 @@ SG:AddButton("Unload", function()
             end
         end
     end)
+    pcall(function()
+        local cg = game:GetService("CoreGui")
+        for _, n in ipairs({"SigmaWatermark", "SigmaStats"}) do
+            local o = cg:FindFirstChild(n)
+            if o then o:Destroy() end
+        end
+    end)
     pcall(function() Library:Unload() end)
 end)
 
 local CreditGroup = Settings:AddRightGroupbox("Credits")
-CreditGroup:AddLabel("Script: Sigma Universal v3.2")
+CreditGroup:AddLabel("Script: Sigma Universal v3.4")
 CreditGroup:AddLabel("Author: @sigmatop1jj")
 CreditGroup:AddDivider()
 CreditGroup:AddButton("Copy Telegram", function()
     pcall(function() if setclipboard then setclipboard("@sigmatop1jj"); Library:Notify("Copied", 3) end end)
+end)
+
+-- ============================================================
+-- WATERMARK
+-- ============================================================
+local watermarkGui = Instance.new("ScreenGui")
+watermarkGui.Name = "SigmaWatermark"
+watermarkGui.ResetOnSpawn = false
+watermarkGui.IgnoreGuiInset = true
+watermarkGui.DisplayOrder = 10000
+pcall(function() watermarkGui.Parent = game:GetService("CoreGui") end)
+if not watermarkGui.Parent then watermarkGui.Parent = LP:WaitForChild("PlayerGui") end
+
+local watermark = Instance.new("TextLabel")
+watermark.Size = UDim2.new(0, 400, 0, 25)
+watermark.Position = UDim2.new(1, -410, 0, 10)
+watermark.BackgroundTransparency = 1
+watermark.Font = Enum.Font.GothamBold
+watermark.TextSize = 14
+watermark.TextColor3 = Color3.fromRGB(180, 100, 255)
+watermark.TextStrokeTransparency = 0.5
+watermark.TextXAlignment = Enum.TextXAlignment.Right
+watermark.Text = "Sigma Universal v3.4 | @sigmatop1jj"
+watermark.Visible = false
+watermark.Parent = watermarkGui
+
+local watermarkRainbow = false
+local watermarkElapsed = 0
+
+-- ============================================================
+-- STATS
+-- ============================================================
+local statsGui = Instance.new("ScreenGui")
+statsGui.Name = "SigmaStats"
+statsGui.ResetOnSpawn = false
+statsGui.IgnoreGuiInset = true
+statsGui.DisplayOrder = 10001
+pcall(function() statsGui.Parent = game:GetService("CoreGui") end)
+if not statsGui.Parent then statsGui.Parent = LP:WaitForChild("PlayerGui") end
+
+local statsFrame = Instance.new("Frame")
+statsFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 25)
+statsFrame.BackgroundTransparency = 0.4
+statsFrame.BorderSizePixel = 0
+statsFrame.Size = UDim2.new(0, 180, 0, 100)
+statsFrame.Position = UDim2.new(0, 10, 0, 10)
+statsFrame.Visible = false
+statsFrame.Parent = statsGui
+
+local statsCorner = Instance.new("UICorner")
+statsCorner.CornerRadius = UDim.new(0, 6)
+statsCorner.Parent = statsFrame
+
+local statsStroke = Instance.new("UIStroke")
+statsStroke.Color = Color3.fromRGB(180, 100, 255)
+statsStroke.Thickness = 1
+statsStroke.Parent = statsFrame
+
+local statsTitle = Instance.new("TextLabel")
+statsTitle.Size = UDim2.new(1, 0, 0, 22)
+statsTitle.BackgroundColor3 = Color3.fromRGB(30, 30, 38)
+statsTitle.BorderSizePixel = 0
+statsTitle.Font = Enum.Font.GothamBold
+statsTitle.TextSize = 12
+statsTitle.TextColor3 = Color3.fromRGB(180, 100, 255)
+statsTitle.Text = "⚡ SIGMA STATS"
+statsTitle.Parent = statsFrame
+
+local statsTitleCorner = Instance.new("UICorner")
+statsTitleCorner.CornerRadius = UDim.new(0, 6)
+statsTitleCorner.Parent = statsTitle
+
+local statsLabel = Instance.new("TextLabel")
+statsLabel.Size = UDim2.new(1, -12, 1, -28)
+statsLabel.Position = UDim2.new(0, 6, 0, 24)
+statsLabel.BackgroundTransparency = 1
+statsLabel.Font = Enum.Font.Code
+statsLabel.TextSize = 13
+statsLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+statsLabel.TextXAlignment = Enum.TextXAlignment.Left
+statsLabel.TextYAlignment = Enum.TextYAlignment.Top
+statsLabel.Text = ""
+statsLabel.Parent = statsFrame
+
+local fpsFrames, fpsTime = 0, 0
+local currentFPS = 0
+RunService.RenderStepped:Connect(function(dt)
+    fpsFrames = fpsFrames + 1
+    fpsTime = fpsTime + dt
+    if fpsTime >= 1 then
+        currentFPS = math.floor(fpsFrames / fpsTime)
+        fpsFrames = 0
+        fpsTime = 0
+    end
+end)
+
+local function GetPing()
+    local ok, ping = pcall(function()
+        return game:GetService("Stats").Network.ServerStatsItem["Data Ping"]:GetValue()
+    end)
+    if ok and ping then return math.floor(ping) end
+    return 0
+end
+
+local statsElapsed = 0
+RunService.Heartbeat:Connect(function(dt)
+    pcall(function()
+        if not Vars.StatsEnabled then
+            statsFrame.Visible = false
+            return
+        end
+        statsFrame.Visible = true
+        statsElapsed = statsElapsed + (dt or 0)
+        local lines = {}
+        if Vars.StatsShowFPS then table.insert(lines, "FPS: " .. currentFPS) end
+        if Vars.StatsShowPing then table.insert(lines, "Ping: " .. GetPing() .. "ms") end
+        if Vars.StatsShowMemory then
+            local ok, mem = pcall(function() return math.floor(game:GetService("Stats"):GetTotalMemoryUsageMb()) end)
+            if ok and mem then table.insert(lines, "Mem: " .. mem .. "MB") end
+        end
+        if Vars.StatsShowTime then table.insert(lines, "Time: " .. os.date("%H:%M:%S")) end
+        statsLabel.Text = table.concat(lines, "\n")
+        if Vars.StatsRainbow then
+            local col = Color3.fromHSV((statsElapsed * 0.5) % 1, 1, 1)
+            statsTitle.TextColor3 = col
+            statsStroke.Color = col
+        else
+            statsTitle.TextColor3 = Color3.fromRGB(180, 100, 255)
+            statsStroke.Color = Color3.fromRGB(180, 100, 255)
+        end
+    end)
+end)
+
+local function ApplyStatsPosition(pos)
+    if pos == "TopLeft" then
+        statsFrame.Position = UDim2.new(0, 10, 0, 10)
+    elseif pos == "TopRight" then
+        statsFrame.Position = UDim2.new(1, -190, 0, 10)
+    elseif pos == "BottomLeft" then
+        statsFrame.Position = UDim2.new(0, 10, 1, -110)
+    elseif pos == "BottomRight" then
+        statsFrame.Position = UDim2.new(1, -190, 1, -110)
+    end
+end
+
+-- ============================================================
+-- FONT / SCALE / WATERMARK / STATS UI
+-- ============================================================
+local function ApplyFont(fontName)
+    local fontEnum = Enum.Font[fontName]
+    if not fontEnum then return end
+    local cg = game:GetService("CoreGui")
+    for _, gui in ipairs(cg:GetChildren()) do
+        if gui:IsA("ScreenGui") and gui.Name ~= "SigmaWatermark" and gui.Name ~= "SigmaStats" then
+            local isOurs = false
+            for _, obj in ipairs(gui:GetDescendants()) do
+                if obj:IsA("TextLabel") and obj.Text == "Sigma Universal" then isOurs = true; break end
+            end
+            if isOurs then
+                for _, obj in ipairs(gui:GetDescendants()) do
+                    if obj:IsA("TextLabel") or obj:IsA("TextButton") then
+                        pcall(function() obj.Font = fontEnum end)
+                    end
+                end
+            end
+        end
+    end
+end
+
+local function ApplyScale(scale)
+    local cg = game:GetService("CoreGui")
+    for _, gui in ipairs(cg:GetChildren()) do
+        if gui:IsA("ScreenGui") and gui.Name ~= "SigmaWatermark" and gui.Name ~= "SigmaStats" then
+            local isOurs = false
+            for _, obj in ipairs(gui:GetDescendants()) do
+                if obj:IsA("TextLabel") and obj.Text == "Sigma Universal" then isOurs = true; break end
+            end
+            if isOurs then
+                local existing = gui:FindFirstChild("SigmaUIScale")
+                if not existing then
+                    existing = Instance.new("UIScale")
+                    existing.Name = "SigmaUIScale"
+                    existing.Parent = gui
+                end
+                existing.Scale = scale
+            end
+        end
+    end
+end
+
+local function ApplyWatermarkPosition(pos)
+    if pos == "TopRight" then
+        watermark.AnchorPoint = Vector2.new(0, 0)
+        watermark.Position = UDim2.new(1, -410, 0, 10)
+        watermark.TextXAlignment = Enum.TextXAlignment.Right
+    elseif pos == "TopLeft" then
+        watermark.AnchorPoint = Vector2.new(0, 0)
+        watermark.Position = UDim2.new(0, 10, 0, 10)
+        watermark.TextXAlignment = Enum.TextXAlignment.Left
+    elseif pos == "BottomRight" then
+        watermark.AnchorPoint = Vector2.new(0, 0)
+        watermark.Position = UDim2.new(1, -410, 1, -30)
+        watermark.TextXAlignment = Enum.TextXAlignment.Right
+    elseif pos == "BottomLeft" then
+        watermark.AnchorPoint = Vector2.new(0, 0)
+        watermark.Position = UDim2.new(0, 10, 1, -30)
+        watermark.TextXAlignment = Enum.TextXAlignment.Left
+    end
+end
+
+local CustomGroup = Settings:AddLeftGroupbox("Customization")
+
+CustomGroup:AddDropdown("UIFont", {
+    Text = "Font Style",
+    Values = {
+        "Gotham", "GothamMedium", "GothamBold", "GothamBlack",
+        "SourceSans", "SourceSansBold", "SourceSansSemibold", "SourceSansLight", "SourceSansItalic",
+        "Arial", "ArialBold", "Legacy",
+        "Code", "Roboto", "RobotoCondensed", "RobotoMono",
+        "Ubuntu", "Sarpanch", "Oswald", "Michroma", "Nunito", "JosefinSans",
+        "FredokaOne", "Cartoon", "SciFi", "Fantasy", "Antique", "Arcade",
+        "Bodoni", "Garamond", "Highway", "IndieFlower", "Maryland",
+        "Merriweather", "Nature", "News", "PatrickHand", "PermanentMarker",
+        "SpecialElite", "TitilliumWeb", "LuckiestGuy", "Bangers",
+        "Creepster", "DenkOne", "Fondamento", "GrenzeGotisch", "Jura", "Kalam"
+    },
+    Default = "Gotham",
+    Callback = function(v) ApplyFont(v) end,
+})
+
+CustomGroup:AddSlider("UIScaleSlider", {
+    Text = "UI Scale",
+    Default = 1, Min = 0.7, Max = 1.5, Rounding = 2,
+    Callback = function(v) ApplyScale(v) end,
+})
+
+CustomGroup:AddDivider()
+CustomGroup:AddToggle("WatermarkEnabled", {
+    Text = "Watermark",
+    Default = false,
+    Callback = function(v) watermark.Visible = v end,
+})
+CustomGroup:AddInput("WatermarkText", {
+    Text = "Watermark Text",
+    Default = "Sigma Universal v3.4 | @sigmatop1jj",
+    Finished = true,
+    Callback = function(v)
+        if v and v ~= "" then watermark.Text = v end
+    end,
+})
+CustomGroup:AddDropdown("WatermarkPos", {
+    Text = "Watermark Position",
+    Values = {"TopRight", "TopLeft", "BottomRight", "BottomLeft"},
+    Default = "TopRight",
+    Callback = function(v) ApplyWatermarkPosition(v) end,
+})
+CustomGroup:AddToggle("WatermarkRainbow", {
+    Text = "Watermark Rainbow",
+    Default = false,
+    Callback = function(v) watermarkRainbow = v end,
+})
+
+CustomGroup:AddDivider()
+CustomGroup:AddToggle("StatsEnabled", {
+    Text = "FPS/Ping Stats",
+    Default = false,
+    Callback = function(v) Vars.StatsEnabled = v end,
+})
+CustomGroup:AddDropdown("StatsPosition", {
+    Text = "Stats Position",
+    Values = {"TopLeft", "TopRight", "BottomLeft", "BottomRight"},
+    Default = "TopLeft",
+    Callback = function(v) ApplyStatsPosition(v) end,
+})
+CustomGroup:AddToggle("StatsShowFPS", {
+    Text = "Show FPS", Default = true,
+    Callback = function(v) Vars.StatsShowFPS = v end,
+})
+CustomGroup:AddToggle("StatsShowPing", {
+    Text = "Show Ping", Default = true,
+    Callback = function(v) Vars.StatsShowPing = v end,
+})
+CustomGroup:AddToggle("StatsShowMemory", {
+    Text = "Show Memory", Default = true,
+    Callback = function(v) Vars.StatsShowMemory = v end,
+})
+CustomGroup:AddToggle("StatsShowTime", {
+    Text = "Show Time", Default = false,
+    Callback = function(v) Vars.StatsShowTime = v end,
+})
+CustomGroup:AddToggle("StatsRainbow", {
+    Text = "Stats Rainbow", Default = false,
+    Callback = function(v) Vars.StatsRainbow = v end,
+})
+
+-- Watermark rainbow loop
+RunService.RenderStepped:Connect(function(dt)
+    pcall(function()
+        if watermarkRainbow and watermark.Visible then
+            watermarkElapsed = watermarkElapsed + (dt or 0)
+            watermark.TextColor3 = Color3.fromHSV((watermarkElapsed * 0.5) % 1, 1, 1)
+        end
+    end)
 end)
 
 -- IGNORE / TARGET / VISIBLE
@@ -486,67 +754,6 @@ RunService.RenderStepped:Connect(function()
             end
         end
     end)
-end)
-
--- HITBOX
-local function ApplyHitbox(char)
-    if not char then return end
-    local hrp = char:FindFirstChild("HumanoidRootPart")
-    if not hrp then return end
-    local old = char:FindFirstChild("SigmaHitbox")
-    if old then pcall(function() old:Destroy() end) end
-    local hitbox = Instance.new("Part")
-    hitbox.Name = "SigmaHitbox"
-    hitbox.Size = hrp.Size * Vars.HitboxScale
-    hitbox.Transparency = 1
-    hitbox.CanCollide = false
-    hitbox.CanQuery = true
-    hitbox.CanTouch = true
-    hitbox.Massless = true
-    hitbox.Anchored = false
-    hitbox.Parent = char
-    local weld = Instance.new("WeldConstraint")
-    weld.Part0 = hitbox; weld.Part1 = hrp; weld.Parent = hitbox
-    hitbox.CFrame = hrp.CFrame
-end
-
-RunService.Heartbeat:Connect(function()
-    pcall(function()
-        if not Vars.HitboxEnabled then
-            for _, p in ipairs(Players:GetPlayers()) do
-                if p ~= LP and p.Character then
-                    local hb = p.Character:FindFirstChild("SigmaHitbox")
-                    if hb then pcall(function() hb:Destroy() end) end
-                end
-            end
-            return
-        end
-        for _, p in ipairs(Players:GetPlayers()) do
-            if p ~= LP and p.Character then
-                if Vars.HitboxTeamCheck and p.Team == LP.Team then
-                    local hb = p.Character:FindFirstChild("SigmaHitbox")
-                    if hb then pcall(function() hb:Destroy() end) end
-                    continue
-                end
-                local hrp = p.Character:FindFirstChild("HumanoidRootPart")
-                if hrp then
-                    local hb = p.Character:FindFirstChild("SigmaHitbox")
-                    if not hb then ApplyHitbox(p.Character)
-                    else
-                        local expected = hrp.Size * Vars.HitboxScale
-                        if hb.Size ~= expected then hb.Size = expected end
-                    end
-                end
-            end
-        end
-    end)
-end)
-
-Players.PlayerRemoving:Connect(function(p)
-    if p.Character then
-        local hb = p.Character:FindFirstChild("SigmaHitbox")
-        if hb then pcall(function() hb:Destroy() end) end
-    end
 end)
 
 -- TRIGGER BOT
@@ -783,45 +990,6 @@ RunService.RenderStepped:Connect(function(dt)
     end)
 end)
 
--- TRACER
-local function CreateTracer(muzzlePart)
-    pcall(function()
-        if not Vars.TracerEnabled then return end
-        local char = LP.Character
-        if not char or not muzzlePart then return end
-        local startPos = muzzlePart.Position
-        local origin = Cam.CFrame.Position
-        local params = RaycastParams.new()
-        params.FilterType = excludeEnum
-        params.FilterDescendantsInstances = {char, Cam}
-        local res = workspace:Raycast(origin, Cam.CFrame.LookVector * 1000, params)
-        local hitPos = res and res.Position or (origin + Cam.CFrame.LookVector * 1000)
-        local dist = (hitPos - startPos).Magnitude
-        if dist < 1 then return end
-        local tracer = Instance.new("Part")
-        tracer.Name = "SigmaTracer"
-        tracer.Size = Vector3.new(Vars.TracerThickness, Vars.TracerThickness, dist)
-        local ok, cf = pcall(function() return CFrame.lookAt(startPos, hitPos) end)
-        if not ok then return end
-        tracer.CFrame = cf * CFrame.new(0, 0, -dist/2)
-        tracer.Anchored = true
-        tracer.CanCollide = false
-        tracer.CanQuery = false
-        tracer.CanTouch = false
-        tracer.Material = Enum.Material.Neon
-        tracer.Color = Vars.TracerColor
-        tracer.Transparency = Vars.TracerStartTransparency
-        tracer.Parent = workspace
-        if Vars.TracerGlow then
-            local light = Instance.new("PointLight")
-            light.Color = Vars.TracerColor; light.Brightness = 3; light.Range = 8
-            light.Parent = tracer
-        end
-        TweenService:Create(tracer, TweenInfo.new(Vars.TracerLifetime, Enum.EasingStyle.Linear), { Transparency = 1 }):Play()
-        Debris:AddItem(tracer, Vars.TracerLifetime + 0.1)
-    end)
-end
-
 -- HIT SOUND
 local lastShotTick = 0
 local hitSoundConns = {}
@@ -879,8 +1047,7 @@ local function PlayShootSound()
     end)
 end
 
--- FIRE RATE LOOP
-local lastTracerTime, lastShootSoundTime = 0, 0
+local lastShootSoundTime = 0
 RunService.Heartbeat:Connect(function()
     pcall(function()
         if not mouseStates.MouseButton1 then return end
@@ -890,20 +1057,10 @@ RunService.Heartbeat:Connect(function()
         if not tool or not IsGunTool(tool) then return end
         local fireRate = GetFireRate(tool)
         local now = tick()
-
-        if now - lastTracerTime >= fireRate then
-            if Vars.TracerEnabled then
-                local muzzle = GetMuzzle(tool, char)
-                if muzzle then CreateTracer(muzzle) end
-            end
-            lastTracerTime = now
-        end
-
         if now - lastShootSoundTime >= fireRate then
             if Vars.CustomShootSoundEnabled then PlayShootSound() end
             lastShootSoundTime = now
         end
-
         lastShotTick = now
     end)
 end)
@@ -929,7 +1086,6 @@ RunService.Heartbeat:Connect(function()
             if UIS:IsKeyDown(Enum.KeyCode.D) then dir = dir + Cam.CFrame.RightVector end
             root.Velocity = dir * Vars.FlySpeed + Vector3.new(0, 0.5, 0)
         end
-        -- SPIDER
         if Vars.SpiderEnabled and hum and UIS:IsKeyDown(Enum.KeyCode.W) then
             local rayParams = RaycastParams.new()
             rayParams.FilterType = excludeEnum
@@ -939,7 +1095,6 @@ RunService.Heartbeat:Connect(function()
                 root.Velocity = Vector3.new(root.Velocity.X, Vars.SpiderSpeed, root.Velocity.Z)
             end
         end
-        -- NOCLIP
         if Vars.NoclipEnabled then
             for _, part in ipairs(char:GetDescendants()) do
                 if part:IsA("BasePart") and part.CanCollide then
@@ -1198,7 +1353,7 @@ Players.PlayerRemoving:Connect(RemoveChams)
 
 task.spawn(function()
     task.wait(1)
-    pcall(function() Library:Notify("Sigma Universal v3.2 loaded!", 5) end)
+    pcall(function() Library:Notify("Sigma Universal v3.4 loaded!", 5) end)
 end)
-print("=== Sigma Universal v3.2 READY ===")
+print("=== Sigma Universal v3.4 READY ===")
 print("Author: @sigmatop1jj")
