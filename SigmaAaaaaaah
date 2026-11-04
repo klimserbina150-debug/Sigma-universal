@@ -1,4 +1,4 @@
--- Sigma Universal v5.4 (no hat, no shoot sound, +PlayerList, +Fly Methods)
+-- Sigma Universal v5.5 (+Themes, +Configs, +Auto-Sprint)
 -- by @sigmatop1jj | t.me/megaswitifox
 
 if getgenv().SigmaLoaded then warn("Sigma already loaded!") return end
@@ -6,10 +6,12 @@ getgenv().SigmaLoaded = true
 
 local repo = "https://raw.githubusercontent.com/violin-suzutsuki/LinoriaLib/main/"
 local Library = loadstring(game:HttpGet(repo .. "Library.lua"))()
+local ThemeManager = loadstring(game:HttpGet(repo .. "addons/ThemeManager.lua"))()
+local SaveManager = loadstring(game:HttpGet(repo .. "addons/SaveManager.lua"))()
 
 local Window = Library:CreateWindow({
     Title = "Sigma Universal",
-    Footer = "by @sigmatop1jj | t.me/megaswitifox | v5.4",
+    Footer = "by @sigmatop1jj | t.me/megaswitifox | v5.5",
     Center = true, AutoShow = true, Resizable = true,
 })
 
@@ -90,6 +92,7 @@ local Vars = {
     ChamsOutline=Color3.fromRGB(255,255,255), ChamsRainbow=false,
     AntiAimEnabled=false, AntiAimPitch=-45,
     Bunnyhop=false, BhopSpeedEnabled=false, BhopSpeedBoost=2, BhopMaxSpeed=50, BhopCurrentSpeed=16,
+    AutoSprint=false,
     Speedhack=false, SpeedValue=24,
     Fly=false, FlySpeed=50, FlyMethod="Velocity (Aggressive)", FlyBodyVel=nil, FlyBodyGyro=nil,
     Spinbot=false, SpinSpeed=15,
@@ -357,6 +360,8 @@ MG:AddDropdown("FlyMethod", {
     Default = "Velocity (Aggressive)",
     Callback = function(v) Vars.FlyMethod = v; if ResetFly then ResetFly() end end,
 })
+T(MG,"AutoSprint","Auto-Sprint",false)
+
 local BG = Movement:AddLeftGroupbox("Bhop Speed")
 T(BG,"BhopSpeedEnabled","Bhop Speed Boost",false); S(BG,"BhopSpeedBoost","Speed per Jump",2,0.5,10,1)
 S(BG,"BhopMaxSpeed","Max Speed",50,16,200,0)
@@ -407,7 +412,7 @@ SG:AddButton("Unload", function()
     pcall(function() Library:Unload() end)
 end)
 local CreditGroup = Settings:AddRightGroupbox("Credits")
-CreditGroup:AddLabel("Script: Sigma Universal v5.4")
+CreditGroup:AddLabel("Script: Sigma Universal v5.5")
 CreditGroup:AddLabel("Author: @sigmatop1jj")
 CreditGroup:AddLabel("Telegram: @megaswitifox")
 CreditGroup:AddDivider()
@@ -426,9 +431,20 @@ watermark.Size = UDim2.new(0, 500, 0, 25); watermark.Position = UDim2.new(1, -51
 watermark.BackgroundTransparency = 1; watermark.Font = Enum.Font.GothamBold
 watermark.TextSize = 14; watermark.TextColor3 = Color3.fromRGB(180, 100, 255)
 watermark.TextStrokeTransparency = 0.5; watermark.TextXAlignment = Enum.TextXAlignment.Right
-watermark.Text = "Sigma v5.4 | @sigmatop1jj | t.me/megaswitifox"; watermark.Visible = false
+watermark.Text = "Sigma v5.5 | @sigmatop1jj | t.me/megaswitifox"; watermark.Visible = false
 watermark.Parent = watermarkGui
-local watermarkRainbow, watermarkElapsed = false, 0-- === STATS ===
+local watermarkRainbow, watermarkElapsed = false, 0
+
+-- === THEME MANAGER + SAVE MANAGER (v5.5) ===
+ThemeManager:SetLibrary(Library)
+SaveManager:SetLibrary(Library)
+SaveManager:IgnoreThemeSettings()
+SaveManager:SetIgnoreIndexes({ "MenuKeybind" })
+ThemeManager:SetFolder("SigmaUniversal")
+SaveManager:SetFolder("SigmaUniversal")
+SaveManager:BuildConfigSection(Settings)
+ThemeManager:ApplyToTab(Settings)
+SaveManager:LoadAutoloadConfig() -- === STATS ===
 local statsGui = Instance.new("ScreenGui")
 statsGui.Name = "SigmaStats"; statsGui.ResetOnSpawn = false
 statsGui.IgnoreGuiInset = true; statsGui.DisplayOrder = 10001
@@ -656,57 +672,39 @@ local plFrame = Instance.new("Frame")
 plFrame.Size = UDim2.new(0, 240, 0, 420)
 plFrame.Position = UDim2.new(0, 10, 0.25, 0)
 plFrame.BackgroundColor3 = Color3.fromRGB(22, 22, 26)
-plFrame.BorderSizePixel = 0
-plFrame.Active = true
-plFrame.Draggable = true
+plFrame.BorderSizePixel = 0; plFrame.Active = true; plFrame.Draggable = true
 plFrame.Parent = plGui
 Instance.new("UICorner", plFrame).CornerRadius = UDim.new(0, 8)
 
 local plStroke = Instance.new("UIStroke")
-plStroke.Color = Color3.fromRGB(50, 50, 60)
-plStroke.Thickness = 1
-plStroke.Parent = plFrame
+plStroke.Color = Color3.fromRGB(50, 50, 60); plStroke.Thickness = 1; plStroke.Parent = plFrame
 
 local plTitle = Instance.new("Frame")
-plTitle.Size = UDim2.new(1, 0, 0, 32)
-plTitle.BackgroundColor3 = Color3.fromRGB(30, 30, 36)
-plTitle.BorderSizePixel = 0
-plTitle.Parent = plFrame
+plTitle.Size = UDim2.new(1, 0, 0, 32); plTitle.BackgroundColor3 = Color3.fromRGB(30, 30, 36)
+plTitle.BorderSizePixel = 0; plTitle.Parent = plFrame
 Instance.new("UICorner", plTitle).CornerRadius = UDim.new(0, 8)
 
 local plAccent = Instance.new("Frame")
-plAccent.Size = UDim2.new(0, 3, 0, 20)
-plAccent.Position = UDim2.new(0, 8, 0.5, -10)
-plAccent.BackgroundColor3 = Color3.fromRGB(120, 70, 200)
-plAccent.BorderSizePixel = 0
+plAccent.Size = UDim2.new(0, 3, 0, 20); plAccent.Position = UDim2.new(0, 8, 0.5, -10)
+plAccent.BackgroundColor3 = Color3.fromRGB(120, 70, 200); plAccent.BorderSizePixel = 0
 plAccent.Parent = plTitle
 Instance.new("UICorner", plAccent).CornerRadius = UDim.new(1, 0)
 
 local plTitleText = Instance.new("TextLabel")
-plTitleText.Size = UDim2.new(1, -30, 1, 0)
-plTitleText.Position = UDim2.new(0, 20, 0, 0)
-plTitleText.BackgroundTransparency = 1
-plTitleText.Font = Enum.Font.GothamBold
-plTitleText.TextSize = 13
-plTitleText.TextColor3 = Color3.new(1, 1, 1)
-plTitleText.Text = "Player List"
-plTitleText.TextXAlignment = Enum.TextXAlignment.Left
+plTitleText.Size = UDim2.new(1, -30, 1, 0); plTitleText.Position = UDim2.new(0, 20, 0, 0)
+plTitleText.BackgroundTransparency = 1; plTitleText.Font = Enum.Font.GothamBold
+plTitleText.TextSize = 13; plTitleText.TextColor3 = Color3.new(1, 1, 1)
+plTitleText.Text = "Player List"; plTitleText.TextXAlignment = Enum.TextXAlignment.Left
 plTitleText.Parent = plTitle
 
 local plScroll = Instance.new("ScrollingFrame")
-plScroll.Size = UDim2.new(1, -12, 1, -42)
-plScroll.Position = UDim2.new(0, 6, 0, 36)
-plScroll.BackgroundTransparency = 1
-plScroll.BorderSizePixel = 0
-plScroll.ScrollBarThickness = 3
-plScroll.ScrollBarImageColor3 = Color3.fromRGB(120, 70, 200)
-plScroll.CanvasSize = UDim2.new(0, 0, 0, 0)
-plScroll.Parent = plFrame
+plScroll.Size = UDim2.new(1, -12, 1, -42); plScroll.Position = UDim2.new(0, 6, 0, 36)
+plScroll.BackgroundTransparency = 1; plScroll.BorderSizePixel = 0
+plScroll.ScrollBarThickness = 3; plScroll.ScrollBarImageColor3 = Color3.fromRGB(120, 70, 200)
+plScroll.CanvasSize = UDim2.new(0, 0, 0, 0); plScroll.Parent = plFrame
 
 local plLayout = Instance.new("UIListLayout")
-plLayout.Padding = UDim.new(0, 4)
-plLayout.SortOrder = Enum.SortOrder.LayoutOrder
-plLayout.Parent = plScroll
+plLayout.Padding = UDim.new(0, 4); plLayout.SortOrder = Enum.SortOrder.LayoutOrder; plLayout.Parent = plScroll
 
 local plRows = {}
 
@@ -716,71 +714,40 @@ local function RebuildPlayerList()
     end
     plRows = {}
     local players = {}
-    for _, p in ipairs(Players:GetPlayers()) do 
-        if p ~= LP then table.insert(players, p) end 
-    end
+    for _, p in ipairs(Players:GetPlayers()) do if p ~= LP then table.insert(players, p) end end
     local myRoot = LP.Character and LP.Character:FindFirstChild("HumanoidRootPart")
     if myRoot then
         table.sort(players, function(a, b)
-            local aD = a.Character and a.Character:FindFirstChild("HumanoidRootPart") 
-                and (a.Character.HumanoidRootPart.Position - myRoot.Position).Magnitude or math.huge
-            local bD = b.Character and b.Character:FindFirstChild("HumanoidRootPart") 
-                and (b.Character.HumanoidRootPart.Position - myRoot.Position).Magnitude or math.huge
+            local aD = a.Character and a.Character:FindFirstChild("HumanoidRootPart") and (a.Character.HumanoidRootPart.Position - myRoot.Position).Magnitude or math.huge
+            local bD = b.Character and b.Character:FindFirstChild("HumanoidRootPart") and (b.Character.HumanoidRootPart.Position - myRoot.Position).Magnitude or math.huge
             return aD < bD
         end)
     end
     for i, p in ipairs(players) do
         local row = Instance.new("Frame")
-        row.Size = UDim2.new(1, 0, 0, 48)
-        row.BackgroundColor3 = Color3.fromRGB(30, 30, 36)
-        row.BorderSizePixel = 0
-        row.LayoutOrder = i
-        row.Parent = plScroll
+        row.Size = UDim2.new(1, 0, 0, 48); row.BackgroundColor3 = Color3.fromRGB(30, 30, 36)
+        row.BorderSizePixel = 0; row.LayoutOrder = i; row.Parent = plScroll
         Instance.new("UICorner", row).CornerRadius = UDim.new(0, 5)
-        
         local rowStroke = Instance.new("UIStroke")
-        rowStroke.Color = Color3.fromRGB(45, 45, 52)
-        rowStroke.Thickness = 1
-        rowStroke.Parent = row
-        
+        rowStroke.Color = Color3.fromRGB(45, 45, 52); rowStroke.Thickness = 1; rowStroke.Parent = row
         local nameLbl = Instance.new("TextLabel")
-        nameLbl.Size = UDim2.new(1, -70, 0, 18)
-        nameLbl.Position = UDim2.new(0, 8, 0, 4)
-        nameLbl.BackgroundTransparency = 1
-        nameLbl.Font = Enum.Font.GothamBold
-        nameLbl.TextSize = 12
-        nameLbl.TextColor3 = Color3.new(1, 1, 1)
-        nameLbl.TextXAlignment = Enum.TextXAlignment.Left
-        nameLbl.Text = p.Name
-        nameLbl.TextTruncate = Enum.TextTruncate.AtEnd
-        nameLbl.Parent = row
-        
+        nameLbl.Size = UDim2.new(1, -70, 0, 18); nameLbl.Position = UDim2.new(0, 8, 0, 4)
+        nameLbl.BackgroundTransparency = 1; nameLbl.Font = Enum.Font.GothamBold; nameLbl.TextSize = 12
+        nameLbl.TextColor3 = Color3.new(1, 1, 1); nameLbl.TextXAlignment = Enum.TextXAlignment.Left
+        nameLbl.Text = p.Name; nameLbl.TextTruncate = Enum.TextTruncate.AtEnd; nameLbl.Parent = row
         local distLbl = Instance.new("TextLabel")
-        distLbl.Size = UDim2.new(0, 60, 0, 16)
-        distLbl.Position = UDim2.new(1, -68, 0, 5)
-        distLbl.BackgroundTransparency = 1
-        distLbl.Font = Enum.Font.GothamMedium
-        distLbl.TextSize = 11
-        distLbl.TextColor3 = Color3.fromRGB(180, 180, 190)
-        distLbl.TextXAlignment = Enum.TextXAlignment.Right
-        distLbl.Text = "0m"
-        distLbl.Parent = row
-        
+        distLbl.Size = UDim2.new(0, 60, 0, 16); distLbl.Position = UDim2.new(1, -68, 0, 5)
+        distLbl.BackgroundTransparency = 1; distLbl.Font = Enum.Font.GothamMedium; distLbl.TextSize = 11
+        distLbl.TextColor3 = Color3.fromRGB(180, 180, 190); distLbl.TextXAlignment = Enum.TextXAlignment.Right
+        distLbl.Text = "0m"; distLbl.Parent = row
         local hpBg = Instance.new("Frame")
-        hpBg.Size = UDim2.new(1, -16, 0, 12)
-        hpBg.Position = UDim2.new(0, 8, 0, 28)
-        hpBg.BackgroundColor3 = Color3.fromRGB(15, 15, 18)
-        hpBg.BorderSizePixel = 0
-        hpBg.Parent = row
+        hpBg.Size = UDim2.new(1, -16, 0, 12); hpBg.Position = UDim2.new(0, 8, 0, 28)
+        hpBg.BackgroundColor3 = Color3.fromRGB(15, 15, 18); hpBg.BorderSizePixel = 0; hpBg.Parent = row
         Instance.new("UICorner", hpBg).CornerRadius = UDim.new(0, 3)
-        
         local hpFill = Instance.new("Frame")
-        hpFill.Size = UDim2.new(1, 0, 1, 0)
-        hpFill.BackgroundColor3 = Color3.fromRGB(100, 200, 100)
-        hpFill.BorderSizePixel = 0
-        hpFill.Parent = hpBg
+        hpFill.Size = UDim2.new(1, 0, 1, 0); hpFill.BackgroundColor3 = Color3.fromRGB(100, 200, 100)
+        hpFill.BorderSizePixel = 0; hpFill.Parent = hpBg
         Instance.new("UICorner", hpFill).CornerRadius = UDim.new(0, 3)
-        
         plRows[p] = {Frame = row, NameLabel = nameLbl, DistLabel = distLbl, HPFill = hpFill}
     end
     plScroll.CanvasSize = UDim2.new(0, 0, 0, plLayout.AbsoluteContentSize.Y + 6)
@@ -1484,6 +1451,21 @@ RunService.Heartbeat:Connect(function()
     end)
 end)
 
+-- === AUTO-SPRINT (v5.5) ===
+RunService.Heartbeat:Connect(function()
+    pcall(function()
+        if not Vars.AutoSprint then return end
+        local char = LP.Character
+        if not char then return end
+        local hum = char:FindFirstChildOfClass("Humanoid")
+        if not hum then return end
+        -- Если двигаешься и не в прицеле — ставим Sprint
+        if hum.MoveDirection.Magnitude > 0 then
+            hum.WalkSpeed = math.max(hum.WalkSpeed, 20)  -- стандарт 16, спринт обычно 20-24
+        end
+    end)
+end)
+
 -- === BHOP SPEED ===
 UIS.JumpRequest:Connect(function()
     if not Vars.BhopSpeedEnabled then return end
@@ -1887,7 +1869,8 @@ end)
 -- === READY ===
 task.spawn(function()
     task.wait(1)
-    pcall(function() Library:Notify("Sigma Universal v5.4 loaded! | t.me/megaswitifox", 5) end)
+    pcall(function() Library:Notify("Sigma Universal v5.5 loaded! | t.me/megaswitifox", 5) end)
 end)
-print("=== Sigma Universal v5.4 READY ===")
+print("=== Sigma Universal v5.5 READY ===")
 print("Author: @sigmatop1jj | t.me/megaswitifox")
+print("Themes + Configs + Auto-Sprint enabled")
